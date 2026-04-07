@@ -1,0 +1,7 @@
+{
+  "name": "remi-engine",
+  "version": "0.0.0-stub",
+  "description": "Stub package — returns placeholder scores. Replace with the real remi-engine for live scoring.",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

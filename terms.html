@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html class="light scroll-smooth" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Terms of Service | REMi</title>
+    <meta name="description" content="REMi Terms of Service — understand your rights and responsibilities when using our platform." />
+    <!-- Favicon -->
+    <link rel="icon" href="assets/landing/favicon/remi-favicon-transparent.png" type="image/png">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Config -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-hover": "#0f4bc4",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-x-hidden antialiased selection:bg-primary selection:text-white">
+    <div class="relative flex min-h-screen flex-col">
+        <!-- Navbar -->
+        <header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <!-- Logo -->
+                    <div class="flex items-center gap-3">
+                        <a href="index.html">
+                            <img src="assets/landing/logos/remi-text-logo.png" alt="REMi" class="h-12 w-auto object-contain dark:invert-0 invert" />
+                        </a>
+                    </div>
+                    <!-- Desktop Nav -->
+                    <nav class="hidden md:flex gap-8 items-center">
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="index.html#about">About</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="index.html#how-it-works">How It Works</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="pricing.html">Pricing</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="index.html#perspectives">Perspectives</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors" href="index.html#faq">FAQ</a>
+                    </nav>
+                    <!-- CTA -->
+                    <div class="flex items-center gap-4">
+                        <a id="login-btn" class="hidden sm:block text-sm font-medium text-slate-900 dark:text-white hover:text-primary cursor-pointer" href="#">Login</a>
+                        <button id="signup-btn" class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all transform active:scale-95 shadow-lg shadow-primary/20">
+                            Sign Up
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow">
+            <!-- Page Hero -->
+            <section class="py-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <p class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">Legal</p>
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-3">Terms of Service</h1>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm">Last updated: March 15, 2026</p>
+                </div>
+            </section>
+
+            <!-- Content -->
+            <section class="py-16 bg-background-light dark:bg-background-dark">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="lg:grid lg:grid-cols-[240px_1fr] lg:gap-16">
+
+                        <!-- Sidebar TOC -->
+                        <aside class="hidden lg:block">
+                            <div class="sticky top-24">
+                                <p class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">On this page</p>
+                                <nav class="flex flex-col gap-2 text-sm">
+                                    <a href="#acceptance" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">1. Acceptance of Terms</a>
+                                    <a href="#service" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">2. Description of Service</a>
+                                    <a href="#eligibility" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">3. Eligibility</a>
+                                    <a href="#accounts" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">4. Account Registration</a>
+                                    <a href="#billing" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">5. Subscription & Billing</a>
+                                    <a href="#payperuse" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">6. Pay-Per-Use Credits</a>
+                                    <a href="#cancellation" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">7. Cancellation & Refunds</a>
+                                    <a href="#ip" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">8. Intellectual Property</a>
+                                    <a href="#disclaimer" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">9. Disclaimer of Warranties</a>
+                                    <a href="#liability" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">10. Limitation of Liability</a>
+                                    <a href="#prohibited" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">11. Prohibited Uses</a>
+                                    <a href="#termination" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">12. Termination</a>
+                                    <a href="#governing" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">13. Governing Law</a>
+                                    <a href="#changes" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">14. Changes to Terms</a>
+                                    <a href="#contact" class="text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">15. Contact</a>
+                                </nav>
+                            </div>
+                        </aside>
+
+                        <!-- Main content -->
+                        <article class="prose-custom">
+
+                            <div id="acceptance" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">1. Acceptance of Terms</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">By accessing or using the REMi platform (the "Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service. These Terms constitute a legally binding agreement between you and REMi Inc. ("REMi," "we," "us," or "our").</p>
+                            </div>
+
+                            <div id="service" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">2. Description of Service</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">REMi is a market-timing signal platform that provides algorithmic cycle scores, watchlists, and market data digests across crypto, stocks, ETFs, and commodities. The Service is designed to help investors identify potential market cycle conditions through data-driven indicators.</p>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">All content and signals provided by REMi are for <strong class="text-slate-900 dark:text-white">informational purposes only</strong> and do not constitute investment advice, financial advice, trading advice, or any other type of advice. You should not rely on the Service as a substitute for professional financial or investment guidance.</p>
+                            </div>
+
+                            <div id="eligibility" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">3. Eligibility</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">You must be at least 18 years of age and capable of entering into a legally binding contract to use the Service. By using REMi, you represent and warrant that you meet these requirements and that your use of the Service does not violate any applicable laws or regulations in your jurisdiction.</p>
+                            </div>
+
+                            <div id="accounts" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">4. Account Registration</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">To access most features, you must create an account with a valid email address. You agree to:</p>
+                                <ul class="list-disc pl-6 space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    <li>Provide accurate and complete registration information</li>
+                                    <li>Keep your password confidential and not share it with third parties</li>
+                                    <li>Notify us immediately of any unauthorized access to your account</li>
+                                    <li>Accept responsibility for all activities that occur under your account</li>
+                                </ul>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mt-4">We reserve the right to suspend or terminate accounts that violate these Terms.</p>
+                            </div>
+
+                            <div id="billing" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">5. Subscription Plans & Billing</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">REMi offers the following subscription tiers:</p>
+                                <div class="overflow-x-auto mb-6">
+                                    <table class="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                        <thead>
+                                            <tr class="bg-slate-100 dark:bg-slate-800">
+                                                <th class="text-left px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Plan</th>
+                                                <th class="text-left px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Price</th>
+                                                <th class="text-left px-4 py-3 font-bold text-slate-700 dark:text-slate-200">Key Limits</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                            <tr class="bg-white dark:bg-surface-dark">
+                                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">Free</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">$0</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">1 score check/day, 3 tickers, daily macro digest</td>
+                                            </tr>
+                                            <tr class="bg-white dark:bg-surface-dark">
+                                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">Core</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">$19/mo or $159/yr</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">Unlimited checks, 3 watchlists, 30-day history</td>
+                                            </tr>
+                                            <tr class="bg-white dark:bg-surface-dark">
+                                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">Pro</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">$49/mo or $399/yr</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">Everything in Core + unlimited history, full macro archive</td>
+                                            </tr>
+                                            <tr class="bg-white dark:bg-surface-dark">
+                                                <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">Founding Member</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">$29/mo forever</td>
+                                                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">Full Pro access, price-locked, founding badge, 200 spots only</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">Subscriptions are billed in advance on a monthly or annual basis. All fees are in USD and are non-refundable except as described in Section 7. By providing payment information, you authorize us to charge your payment method for all applicable fees.</p>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">Prices are subject to change with 30 days' notice. Founding Member pricing is locked for as long as the subscription remains active and is not subject to price increases.</p>
+                            </div>
+
+                            <div id="payperuse" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">6. Pay-Per-Use Credits</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">In addition to subscriptions, REMi offers pay-per-use add-ons:</p>
+                                <ul class="list-disc pl-6 space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    <li>$2.99 per extra score check (beyond plan limit)</li>
+                                    <li>$5.99 for 1-week alerts on a single ticker</li>
+                                    <li>$9.99/mo unlimited alerts on a single ticker</li>
+                                    <li>$9.99 per premium event report</li>
+                                </ul>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mt-4">Pay-per-use charges are non-refundable once the service has been rendered.</p>
+                            </div>
+
+                            <div id="cancellation" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">7. Cancellation & Refunds</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">You may cancel your subscription at any time through your account settings. Upon cancellation:</p>
+                                <ul class="list-disc pl-6 space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    <li>You will retain access to paid features through the end of your current billing period</li>
+                                    <li>No partial refunds are issued for unused time in the current billing period</li>
+                                    <li>Annual subscriptions canceled within 14 days of renewal may be eligible for a prorated refund at our discretion</li>
+                                </ul>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mt-4">To request a refund, contact us at <a href="mailto:support@getremi.com" class="text-primary hover:text-primary-hover transition-colors">support@getremi.com</a> within 14 days of the charge.</p>
+                            </div>
+
+                            <div id="ip" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">8. Intellectual Property</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">All content on the Service — including but not limited to the REMi scoring algorithm, signal methodology, UI design, copy, logos, and data visualizations — is the exclusive property of REMi Inc. and is protected by applicable intellectual property laws.</p>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">You are granted a limited, non-exclusive, non-transferable license to access and use the Service for personal, non-commercial purposes. You may not reproduce, distribute, modify, or create derivative works from any content without our express written permission.</p>
+                            </div>
+
+                            <div id="disclaimer" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">9. Disclaimer of Warranties</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4"><strong class="text-slate-900 dark:text-white">REMi is not a registered investment advisor.</strong> Nothing on the Service constitutes investment advice, a solicitation, or a recommendation to buy or sell any security or asset. Market data, cycle scores, and signals are provided for informational purposes only. Past performance is not indicative of future results.</p>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR ACCURATE.</p>
+                            </div>
+
+                            <div id="liability" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">10. Limitation of Liability</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">TO THE MAXIMUM EXTENT PERMITTED BY LAW, REMI INC. AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES — INCLUDING LOSS OF PROFITS, DATA, OR GOODWILL — ARISING OUT OF OR RELATED TO YOUR USE OF THE SERVICE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. IN NO EVENT SHALL OUR TOTAL LIABILITY EXCEED THE AMOUNT YOU PAID US IN THE 12 MONTHS PRECEDING THE CLAIM.</p>
+                            </div>
+
+                            <div id="prohibited" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">11. Prohibited Uses</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">You agree not to:</p>
+                                <ul class="list-disc pl-6 space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
+                                    <li>Scrape, crawl, or systematically extract data from the Service</li>
+                                    <li>Reverse-engineer or attempt to extract the scoring algorithm or underlying logic</li>
+                                    <li>Share, resell, or redistribute any signals, scores, or content from the Service</li>
+                                    <li>Use the Service for any unlawful purpose or in violation of any applicable regulation</li>
+                                    <li>Attempt to gain unauthorized access to any portion of the Service or its infrastructure</li>
+                                    <li>Use automated means (bots, scrapers, scripts) to access the Service without written permission</li>
+                                </ul>
+                            </div>
+
+                            <div id="termination" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">12. Termination</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">We reserve the right to suspend or terminate your account at any time, with or without notice, for violation of these Terms or any conduct we deem harmful to the Service or other users. Upon termination, your right to use the Service ceases immediately. Sections 8 (IP), 9 (Disclaimer), 10 (Liability), and 13 (Governing Law) survive termination.</p>
+                            </div>
+
+                            <div id="governing" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">13. Governing Law</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">These Terms are governed by and construed in accordance with the laws of the State of Delaware, without regard to conflict of law principles. Any dispute arising under these Terms shall be resolved exclusively in the state or federal courts located in Delaware, and you consent to personal jurisdiction in those courts.</p>
+                            </div>
+
+                            <div id="changes" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">14. Changes to Terms</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">We may update these Terms from time to time. When we do, we'll revise the "Last updated" date at the top of this page and, for material changes, notify you by email or in-app notice. Your continued use of the Service after changes are posted constitutes your acceptance of the updated Terms.</p>
+                            </div>
+
+                            <div id="contact" class="mb-12 scroll-mt-28">
+                                <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-4">15. Contact</h2>
+                                <p class="text-slate-600 dark:text-slate-300 leading-relaxed">If you have any questions about these Terms, please contact us at:</p>
+                                <div class="mt-4 p-6 bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <p class="font-bold text-slate-900 dark:text-white">REMi Inc.</p>
+                                    <p class="text-slate-600 dark:text-slate-300 mt-1"><a href="mailto:support@getremi.com" class="text-primary hover:text-primary-hover transition-colors">support@getremi.com</a></p>
+                                </div>
+                            </div>
+
+                        </article>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <img src="assets/landing/logos/remi-text-logo.png" alt="REMi" class="h-8 w-auto object-contain dark:invert-0 invert" />
+                </div>
+                <div class="flex gap-8 text-slate-600 dark:text-slate-400">
+                    <a class="hover:text-primary transition-colors" href="privacy.html">Privacy</a>
+                    <a class="hover:text-primary transition-colors font-semibold text-primary" href="terms.html">Terms</a>
+                    <a class="hover:text-primary transition-colors" href="#">Twitter</a>
+                    <a class="hover:text-primary transition-colors" href="#">Instagram</a>
+                </div>
+                <div class="flex flex-col items-center md:items-end gap-2">
+                    <p class="text-slate-500 text-sm">© 2026 REMi Inc.</p>
+                    <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span>Built by</span>
+                        <img src="assets/landing/logos/circadia-logo.png" alt="Circadia" class="h-4 w-auto opacity-70 hover:opacity-100 transition-opacity dark:invert" />
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <script src="js/landing.js"></script>
+    <script type="module" src="/js/authModal.ts"></script>
+</body>
+
+</html>

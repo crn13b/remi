@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+
+<html class="light scroll-smooth" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>REMi | Pricing</title>
+    <meta name="description"
+        content="Simple, transparent pricing for REMi. Start free, upgrade when you're ready." />
+    <!-- Favicon -->
+    <link rel="icon" href="assets/landing/favicon/remi-favicon-transparent.png" type="image/png">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Config -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-hover": "#0f4bc4",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="css/landing.css">
+    <style>
+        .pricing-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .pricing-card:hover {
+            transform: translateY(-4px);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            border-radius: 9999px;
+            background: #cbd5e1;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .toggle-switch .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            border-radius: 9999px;
+            background: white;
+            transition: transform 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.active .toggle-knob {
+            transform: translateX(28px);
+        }
+        .feature-check {
+            color: #00fea5;
+        }
+        .feature-dash {
+            color: #64748b;
+        }
+        @keyframes countPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .founding-counter {
+            animation: countPulse 2s ease-in-out infinite;
+        }
+        /* Founding section glow */
+        .founding-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .founding-glow-1 {
+            top: -200px;
+            left: -100px;
+            background: #facc15;
+        }
+        .founding-glow-2 {
+            bottom: -200px;
+            right: -100px;
+            background: #f59e0b;
+        }
+        /* Shimmer effect on CTA */
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .founding-cta {
+            background: linear-gradient(110deg, #facc15 0%, #fde68a 25%, #facc15 50%, #fde68a 75%, #facc15 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+        }
+        .founding-cta:hover {
+            background: linear-gradient(110deg, #fde68a 0%, #fef9c3 25%, #fde68a 50%, #fef9c3 75%, #fde68a 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+        }
+        /* Progress bar fill */
+        @keyframes progressGlow {
+            0%, 100% { box-shadow: 0 0 8px rgba(250,204,21,0.4); }
+            50% { box-shadow: 0 0 16px rgba(250,204,21,0.7); }
+        }
+        .progress-fill {
+            animation: progressGlow 2s ease-in-out infinite;
+        }
+        /* Savings badge pulse */
+        @keyframes savingsPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .savings-highlight {
+            animation: savingsPulse 3s ease-in-out infinite;
+        }
+
+        /* === Founding Member Secret Card === */
+        @keyframes goldBorderPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); border-color: rgba(250,204,21,0.3); }
+            50% { box-shadow: 0 0 20px 4px rgba(250,204,21,0.25); border-color: rgba(250,204,21,0.7); }
+        }
+        .founding-locked-card {
+            animation: goldBorderPulse 3s ease-in-out infinite;
+            cursor: pointer;
+        }
+        @keyframes shimmerBurst {
+            0% { opacity: 0; transform: scale(0.6); }
+            40% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+        .shimmer-burst {
+            position: absolute;
+            inset: 0;
+            border-radius: 1rem;
+            background: radial-gradient(ellipse at center, rgba(250,204,21,0.85) 0%, rgba(251,146,60,0.5) 40%, transparent 75%);
+            animation: shimmerBurst 0.7s ease-out forwards;
+            pointer-events: none;
+            z-index: 20;
+        }
+        @keyframes goldTextShimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .gold-shimmer-text {
+            background: linear-gradient(110deg, #d97706 0%, #fde68a 30%, #facc15 50%, #fde68a 70%, #d97706 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: goldTextShimmer 3s linear infinite;
+        }
+        @keyframes revealedGlow {
+            0%, 100% { box-shadow: 0 0 15px 2px rgba(250,204,21,0.3); }
+            50% { box-shadow: 0 0 30px 6px rgba(250,204,21,0.5); }
+        }
+        .founding-revealed-card {
+            animation: revealedGlow 2.5s ease-in-out infinite;
+        }
+        @keyframes lockShake {
+            0%, 100% { transform: rotate(0deg); }
+            20% { transform: rotate(-8deg); }
+            40% { transform: rotate(8deg); }
+            60% { transform: rotate(-5deg); }
+            80% { transform: rotate(5deg); }
+        }
+        .lock-icon:hover {
+            animation: lockShake 0.5s ease;
+        }
+    </style>
+</head>
+
+<body
+    class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-x-hidden antialiased selection:bg-primary selection:text-white">
+    <div class="relative flex min-h-screen flex-col">
+        <!-- Navbar -->
+        <header
+            class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <!-- Logo -->
+                    <div class="flex items-center gap-3">
+                        <a href="index.html">
+                            <img src="assets/landing/logos/remi-text-logo.png" alt="REMi"
+                                class="h-12 w-auto object-contain dark:invert-0 invert" />
+                        </a>
+                    </div>
+                    <!-- Desktop Nav -->
+                    <nav class="hidden md:flex gap-8 items-center">
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="index.html#about">About</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="index.html#how-it-works">How It Works</a>
+                        <a class="text-sm font-medium text-primary font-bold"
+                            href="pricing.html">Pricing</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="index.html#faq">FAQ</a>
+                    </nav>
+                    <!-- CTA -->
+                    <div class="flex items-center gap-4">
+                        <a id="login-btn" class="hidden sm:block text-sm font-medium text-slate-900 dark:text-white hover:text-primary cursor-pointer"
+                            href="#">Login</a>
+                        <button id="signup-btn"
+                            class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all transform active:scale-95 shadow-lg shadow-primary/20">
+                            Sign Up
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow">
+            <!-- Hero -->
+            <section class="pt-8 pb-2 bg-background-light dark:bg-background-dark">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h1 class="animate-fade-up delay-100 text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+                        Simple, transparent pricing
+                    </h1>
+                    <p class="animate-fade-up delay-200 text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-5">
+                        Start free. Upgrade when REMi becomes part of your routine.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Founding Member Hero Banner -->
+            <section class="pb-6 bg-background-light dark:bg-background-dark">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="relative rounded-3xl overflow-hidden border-2"
+                        style="background: radial-gradient(ellipse at 30% 20%, #1a2744 0%, #0d1117 60%, #080c14 100%); border-color: rgba(250,204,21,0.4);">
+                        <!-- Ambient gold glow orbs -->
+                        <div class="absolute top-0 left-0 w-96 h-96 rounded-full blur-3xl opacity-15 pointer-events-none" style="background: #facc15; transform: translate(-30%, -40%);"></div>
+                        <div class="absolute bottom-0 right-0 w-72 h-72 rounded-full blur-3xl opacity-10 pointer-events-none" style="background: #f59e0b; transform: translate(20%, 30%);"></div>
+
+                        <!-- Gold top ribbon -->
+                        <div class="relative px-6 py-2.5 flex items-center justify-between" style="background: linear-gradient(110deg, #b45309, #d97706, #facc15, #fde68a, #facc15, #d97706, #b45309); background-size: 200% 100%; animation: shimmer 4s linear infinite;">
+                            <div class="flex items-center gap-2">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#0d1117;"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2" style="background:#0d1117;"></span>
+                                </span>
+                                <span class="text-slate-900 text-xs font-black uppercase tracking-widest">Limited — Only 200 Founding Spots</span>
+                            </div>
+                            <span class="text-slate-900/80 text-xs font-bold hidden sm:block">187 remaining</span>
+                        </div>
+
+                        <!-- Main content -->
+                        <div class="relative z-10 px-6 sm:px-10 pt-8 pb-10">
+                            <div class="flex flex-col lg:flex-row items-center lg:items-start gap-8 lg:gap-12">
+
+                                <!-- Left: Headline + Price -->
+                                <div class="flex-1 text-center lg:text-left">
+                                    <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: rgba(250,204,21,0.7);">For early believers only</p>
+                                    <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-2 leading-tight">
+                                        Become a<br>
+                                        <span class="gold-shimmer-text">Founding Member</span>
+                                    </h2>
+                                    <p class="text-slate-400 text-sm sm:text-base max-w-md mb-6">
+                                        Full Pro access. Price locked forever. Be one of the first 200 to believe in REMi — and get rewarded for it permanently.
+                                    </p>
+
+                                    <!-- Price -->
+                                    <div class="flex items-baseline gap-3 justify-center lg:justify-start mb-2">
+                                        <span class="text-6xl sm:text-7xl font-black text-white">$29</span>
+                                        <div>
+                                            <div style="color: rgba(250,204,21,0.9);" class="text-lg font-bold">/mo forever</div>
+                                            <div class="text-sm text-slate-500"><s class="text-slate-600">$49/mo Pro</s> <span class="text-green-400 font-semibold">save $240/yr</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Features + CTA -->
+                                <div class="flex-shrink-0 w-full lg:w-auto lg:min-w-[320px]">
+                                    <!-- Features -->
+                                    <div class="grid grid-cols-2 gap-x-6 gap-y-3 mb-6">
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined" style="color:#facc15; font-size:18px;">lock</span>
+                                            <span class="text-sm text-slate-300">Price locked for life</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined" style="color:#facc15; font-size:18px;">verified</span>
+                                            <span class="text-sm text-slate-300">Founding badge</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined" style="color:#facc15; font-size:18px;">forum</span>
+                                            <span class="text-sm text-slate-300">Direct team access</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined" style="color:#facc15; font-size:18px;">how_to_vote</span>
+                                            <span class="text-sm text-slate-300">Roadmap voting</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 col-span-2">
+                                            <span class="material-symbols-outlined" style="color:#facc15; font-size:18px;">check_circle</span>
+                                            <span class="text-sm text-slate-300">Full Pro access — unlimited everything</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- CTA -->
+                                    <a href="https://buy.stripe.com/test_dRmdR9aI35Et7RFar6bo404" target="_blank"
+                                        class="founding-cta block w-full h-14 rounded-xl text-slate-900 font-black text-base shadow-lg flex items-center justify-center transition-all transform hover:scale-[1.02] active:scale-95">
+                                        Claim Your Founding Spot
+                                    </a>
+
+                                    <!-- Progress bar -->
+                                    <div class="mt-4">
+                                        <div class="flex justify-between text-xs mb-1.5">
+                                            <span class="text-slate-500">Spots claimed</span>
+                                            <span style="color:#facc15;" class="font-bold">13 / 200</span>
+                                        </div>
+                                        <div class="w-full rounded-full h-2 overflow-hidden" style="background:rgba(255,255,255,0.08);">
+                                            <div class="progress-fill h-2 rounded-full" style="width:6.5%; background: linear-gradient(to right, #facc15, #f59e0b);"></div>
+                                        </div>
+                                        <p class="text-xs text-slate-600 mt-2 text-center">Once all 200 spots are claimed, this offer disappears.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subtle breathing glow border -->
+                        <div class="absolute inset-0 rounded-3xl pointer-events-none founding-revealed-card" style="border: 2px solid transparent;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Divider: Standard Plans + Billing Toggle -->
+            <section class="pt-2 pb-4 bg-background-light dark:bg-background-dark">
+                <div class="max-w-4xl mx-auto px-4">
+                    <div class="flex items-center gap-4 mb-5">
+                        <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                        <span class="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">or choose a standard plan</span>
+                        <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                    </div>
+                    <!-- Billing Toggle -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="flex items-center justify-center gap-4">
+                            <span id="label-monthly" class="text-sm font-semibold text-slate-900 dark:text-white">Monthly</span>
+                            <div id="billing-toggle" class="toggle-switch" style="background:#cbd5e1;">
+                                <div class="toggle-knob"></div>
+                            </div>
+                            <span id="label-annual" class="text-sm font-medium text-slate-500 dark:text-slate-400">Annual</span>
+                        </div>
+                        <span id="save-badge" class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2.5 py-1 rounded-full transition-all duration-300" style="opacity:0;">
+                            Save 16%
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pricing Cards -->
+            <section class="pb-8 bg-background-light dark:bg-background-dark">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid md:grid-cols-3 gap-4 lg:gap-6">
+                        <!-- Free Tier -->
+                        <div class="pricing-card animate-fade-up delay-200 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col">
+                            <div class="mb-3">
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white mb-0.5">Free</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Get started, see if REMi clicks</p>
+                            </div>
+                            <div class="mb-4">
+                                <span class="text-4xl font-black text-slate-900 dark:text-white">$0</span>
+                                <span class="text-slate-500 dark:text-slate-400 text-sm ml-1">forever</span>
+                            </div>
+                            <button onclick="document.getElementById('signup-btn').click()"
+                                class="w-full h-10 rounded-xl border-2 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-bold text-sm hover:border-primary hover:text-primary transition-all mb-4">
+                                Get Started Free
+                            </button>
+                            <ul class="space-y-2.5 flex-grow">
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">1 confidence score check per day</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">3 tickers in watchlist (price only)</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Daily macro digest email</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-dash text-base mt-0.5">remove</span>
+                                    <span class="text-xs text-slate-400">No alerts</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-dash text-base mt-0.5">remove</span>
+                                    <span class="text-xs text-slate-400">No score history</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Core Tier -->
+                        <div class="pricing-card animate-fade-up delay-300 bg-white dark:bg-surface-dark border-2 border-primary rounded-2xl p-5 flex flex-col relative shadow-xl shadow-primary/10">
+                            <div class="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                                <span class="bg-primary text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider">Most Popular</span>
+                            </div>
+                            <div class="mb-3">
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white mb-0.5">Core</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">For investors who want the edge</p>
+                            </div>
+                            <div class="mb-4">
+                                <span id="core-price" class="text-4xl font-black text-slate-900 dark:text-white">$19</span>
+                                <span id="core-period" class="text-slate-500 dark:text-slate-400 text-sm ml-1">/month</span>
+                                <div id="core-annual-note" class="text-xs text-slate-400 mt-0.5 hidden">Billed annually at $159/yr</div>
+                            </div>
+                            <a id="core-btn" href="https://buy.stripe.com/test_dRmdR98zV6Ix0pd56Mbo401" target="_blank"
+                                class="w-full h-10 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm transition-all shadow-lg shadow-primary/20 mb-4 flex items-center justify-center">
+                                Get Started
+                            </a>
+                            <ul class="space-y-2.5 flex-grow">
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300"><strong>Unlimited</strong> confidence score checks</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300"><strong>Unlimited alerts</strong> on up to 3 tickers</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">3 watchlists, unlimited tickers</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Confidence scores in watchlist</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">30-day score history</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Full daily macro report</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Pro Tier -->
+                        <div class="pricing-card animate-fade-up delay-400 bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex flex-col relative overflow-hidden">
+                            <div class="mb-3">
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white mb-0.5">Pro</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Full power. No limits.</p>
+                            </div>
+                            <div class="mb-4">
+                                <span id="pro-price" class="text-4xl font-black text-slate-900 dark:text-white">$49</span>
+                                <span id="pro-period" class="text-slate-500 dark:text-slate-400 text-sm ml-1">/month</span>
+                                <div id="pro-annual-note" class="text-xs text-slate-400 mt-0.5 hidden">Billed annually at $399/yr</div>
+                            </div>
+                            <a id="pro-btn" href="https://buy.stripe.com/test_eVq28rg2n9UJ6NB6aQbo403" target="_blank"
+                                class="w-full h-10 rounded-xl border-2 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-bold text-sm hover:border-primary hover:text-primary transition-all mb-4 flex items-center justify-center">
+                                Get Started
+                            </a>
+                            <p class="text-xs font-semibold text-primary mb-3 uppercase tracking-wider">Everything in Core, plus:</p>
+                            <ul class="space-y-2.5 flex-grow">
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300"><strong>Unlimited alerts</strong> on all tickers</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Full score history (unlimited lookback)</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Full macro report archive</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Priority support</span>
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Early access to new features</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <!-- Pay-Per-Use Callout -->
+                    <div class="animate-fade-up delay-500 mt-6 text-center">
+                        <p class="text-sm text-slate-500 dark:text-slate-400">
+                            Not ready to commit?
+                            <button id="ppu-toggle" class="text-primary font-semibold hover:underline">See pay-per-use options</button>
+                        </p>
+                        <div id="ppu-section" class="hidden mt-6 max-w-2xl mx-auto">
+                            <div class="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
+                                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Pay as you go</h4>
+                                <div class="grid sm:grid-cols-2 gap-4">
+                                    <div class="flex items-start gap-3 text-left">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">query_stats</span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$2.99 per score check</p>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400">Extra checks beyond daily free limit</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3 text-left">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">notifications_active</span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$5.99 for 1-week alerts</p>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400">Alerts on a single ticker for 7 days</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3 text-left">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">notifications</span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$9.99/mo per ticker alerts</p>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400">Unlimited alerts on a single ticker</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3 text-left">
+                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">lab_research</span>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$9.99 per premium report</p>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400">Deep macro analysis for major events</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Feature Comparison Table -->
+            <section class="py-20 bg-background-light dark:bg-background-dark">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-3xl md:text-4xl font-black text-center text-slate-900 dark:text-white mb-12">Compare plans</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-separate border-spacing-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-left py-4 pr-4 text-sm font-semibold text-slate-500 dark:text-slate-400" style="width:30%; border-bottom: 2px solid #e2e8f0;"></th>
+                                    <!-- Free -->
+                                    <th class="text-center py-4 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300" style="width:15%; border-bottom: 2px solid #e2e8f0; border-left: 1px solid #e2e8f0;">Free</th>
+                                    <!-- Core -->
+                                    <th class="text-center py-4 px-3 text-sm font-semibold text-primary" style="width:15%; border-bottom: 2px solid #135bec; border-left: 1px solid #e2e8f0;">Core</th>
+                                    <!-- Pro -->
+                                    <th class="text-center py-4 px-3 text-sm font-semibold text-slate-700 dark:text-slate-300" style="width:15%; border-bottom: 2px solid #e2e8f0; border-left: 1px solid #e2e8f0;">Pro</th>
+                                    <!-- Founder -->
+                                    <th class="text-center py-3 px-3 rounded-t-xl" style="width:18%; border: 2px solid rgba(250,204,21,0.5); border-bottom: none; background: linear-gradient(135deg, #1a1f2e 0%, #0f1320 100%); border-left: none;">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <span class="text-xs font-black uppercase tracking-widest gold-shimmer-text">Founding</span>
+                                            <span class="text-xs font-black uppercase tracking-widest gold-shimmer-text">Member</span>
+                                            <span class="text-xs font-bold mt-0.5" style="color: rgba(250,204,21,0.8);">$29/mo</span>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Confidence score checks</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">1/day</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Score-based alerts</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">3 tickers</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Watchlists</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">1 (3 tickers)</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">3 (unlimited)</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Confidence score in watchlist</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-green-500 text-lg">check</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-green-500 text-lg">check</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
+                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">check</span>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Score history</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">30 days</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Macro analysis</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Daily digest</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Full daily</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Full + archive</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Full + archive</td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Priority support</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-green-500 text-lg">check</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
+                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">check</span>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Early feature access</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-green-500 text-lg">check</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
+                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">check</span>
+                                    </td>
+                                </tr>
+                                <!-- Founder-exclusive rows -->
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Price locked forever</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
+                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">lock</span>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-slate-100 dark:border-slate-800">
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Founding badge + direct team access</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
+                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">verified</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Roadmap voting</td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
+                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
+                                    </td>
+                                    <td class="text-center py-4 px-3 rounded-b-xl" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); border-bottom: 2px solid rgba(250,204,21,0.5); background: rgba(250,204,21,0.03);">
+                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">how_to_vote</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section class="py-20 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 class="text-3xl md:text-4xl font-black text-center text-slate-900 dark:text-white mb-12">Pricing FAQ</h2>
+                    <div class="space-y-8">
+                        <div class="border-b border-slate-200 dark:border-slate-700 pb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Can I cancel anytime?</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Yes. No contracts, no hidden fees. Cancel your subscription at any time and you'll keep access until the end of your billing period.
+                            </p>
+                        </div>
+                        <div class="border-b border-slate-200 dark:border-slate-700 pb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">What does the founding member price lock mean?</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Founding members pay $29/month for Pro access permanently. Even as prices change, your rate stays locked for as long as your subscription is active. It never increases.
+                            </p>
+                        </div>
+                        <div class="border-b border-slate-200 dark:border-slate-700 pb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Can I switch plans?</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Absolutely. Upgrade or downgrade at any time. If you upgrade mid-cycle, you'll be credited for the remaining time on your current plan.
+                            </p>
+                        </div>
+                        <div class="border-b border-slate-200 dark:border-slate-700 pb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Is REMi financial advice?</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                No. REMi provides algorithmically generated market intelligence and confidence signals. It is not a financial advisor and does not constitute financial advice. All investment decisions are yours.
+                            </p>
+                        </div>
+                        <div class="border-b border-slate-200 dark:border-slate-700 pb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">What payment methods do you accept?</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                We accept all major credit and debit cards. Payment processing is handled securely through Stripe.
+                            </p>
+                        </div>
+                        <div class="pb-6">
+                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">What happens if I use pay-per-use often?</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Pay-per-use is there for flexibility, but the math works out better with a subscription. For example, 4 extra score checks per week at $2.99 each costs ~$48/month, while Core gives you unlimited checks for $19/month.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom CTA -->
+            <section class="py-20 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Ready to invest with confidence?</h2>
+                    <p class="text-xl text-slate-600 dark:text-slate-300 mb-10">Start free. No credit card required.</p>
+                    <button onclick="document.getElementById('signup-btn').click()"
+                        class="h-14 px-10 rounded-xl bg-primary hover:bg-primary-hover text-white font-black text-lg transition-all shadow-xl shadow-primary/20 transform active:scale-95">
+                        Get Started Free
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 py-12">
+            <div
+                class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <a href="index.html">
+                        <img src="assets/landing/logos/remi-text-logo.png" alt="REMi"
+                            class="h-8 w-auto object-contain dark:invert-0 invert" />
+                    </a>
+                </div>
+                <div class="flex gap-8 text-slate-600 dark:text-slate-400">
+                    <a class="hover:text-primary transition-colors" href="privacy.html">Privacy</a>
+                    <a class="hover:text-primary transition-colors" href="terms.html">Terms</a>
+                    <a class="hover:text-primary transition-colors" href="#">Twitter</a>
+                    <a class="hover:text-primary transition-colors" href="#">Instagram</a>
+                </div>
+                <div class="flex flex-col items-center md:items-end gap-2">
+                    <p class="text-slate-500 text-sm">&copy; 2026 REMi Inc.</p>
+                    <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span>Built by</span>
+                        <img src="assets/landing/logos/circadia-logo.png" alt="Circadia"
+                            class="h-4 w-auto opacity-70 hover:opacity-100 transition-opacity dark:invert" />
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Stripe payment links
+        const LINKS = {
+            coreMonthly: 'https://buy.stripe.com/test_cNi7sLbM7ff31thar6bo400',
+            coreAnnual:  'https://buy.stripe.com/test_dRmdR98zV6Ix0pd56Mbo401',
+            proMonthly:  'https://buy.stripe.com/test_dRmcN55nJaYN6NB7eUbo402',
+            proAnnual:   'https://buy.stripe.com/test_eVq28rg2n9UJ6NB6aQbo403',
+        };
+
+        // Billing toggle
+        const toggle = document.getElementById('billing-toggle');
+        const labelMonthly = document.getElementById('label-monthly');
+        const labelAnnual = document.getElementById('label-annual');
+        const saveBadge = document.getElementById('save-badge');
+        const corePrice = document.getElementById('core-price');
+        const corePeriod = document.getElementById('core-period');
+        const coreAnnualNote = document.getElementById('core-annual-note');
+        const proPrice = document.getElementById('pro-price');
+        const proPeriod = document.getElementById('pro-period');
+        const proAnnualNote = document.getElementById('pro-annual-note');
+        const coreBtn = document.getElementById('core-btn');
+        const proBtn = document.getElementById('pro-btn');
+
+        let isAnnual = false;
+
+        // Initialize to monthly state
+        corePrice.textContent = '$19';
+        coreAnnualNote.classList.add('hidden');
+        proPrice.textContent = '$49';
+        proAnnualNote.classList.add('hidden');
+        coreBtn.href = LINKS.coreMonthly;
+        proBtn.href = LINKS.proMonthly;
+
+        toggle.addEventListener('click', () => {
+            isAnnual = !isAnnual;
+            toggle.classList.toggle('active', isAnnual);
+            toggle.style.background = isAnnual ? '#135bec' : '#cbd5e1';
+
+            labelMonthly.className = isAnnual
+                ? 'text-sm font-medium text-slate-500 dark:text-slate-400'
+                : 'text-sm font-semibold text-slate-900 dark:text-white';
+
+            labelAnnual.className = isAnnual
+                ? 'text-sm font-semibold text-slate-900 dark:text-white'
+                : 'text-sm font-medium text-slate-500 dark:text-slate-400';
+
+            saveBadge.style.opacity = isAnnual ? '1' : '0';
+
+            if (isAnnual) {
+                corePrice.textContent = '$13';
+                coreAnnualNote.classList.remove('hidden');
+                proPrice.textContent = '$33';
+                proAnnualNote.classList.remove('hidden');
+                coreBtn.href = LINKS.coreAnnual;
+                proBtn.href = LINKS.proAnnual;
+            } else {
+                corePrice.textContent = '$19';
+                coreAnnualNote.classList.add('hidden');
+                proPrice.textContent = '$49';
+                proAnnualNote.classList.add('hidden');
+                coreBtn.href = LINKS.coreMonthly;
+                proBtn.href = LINKS.proMonthly;
+            }
+        });
+
+        // Pay-per-use toggle
+        const ppuToggle = document.getElementById('ppu-toggle');
+        const ppuSection = document.getElementById('ppu-section');
+        ppuToggle.addEventListener('click', () => {
+            ppuSection.classList.toggle('hidden');
+            ppuToggle.textContent = ppuSection.classList.contains('hidden')
+                ? 'See pay-per-use options'
+                : 'Hide pay-per-use options';
+        });
+
+        /* revealFoundingCard() — preserved for swap-back to secret card variant
+        function revealFoundingCard() {
+            const card = document.getElementById('founding-card');
+            const locked = document.getElementById('founding-locked');
+            const revealed = document.getElementById('founding-revealed');
+            if (card.dataset.revealed === 'true') return;
+            card.dataset.revealed = 'true';
+            const burst = document.createElement('div');
+            burst.className = 'shimmer-burst';
+            card.appendChild(burst);
+            setTimeout(() => {
+                locked.style.display = 'none';
+                revealed.classList.remove('hidden');
+                revealed.classList.add('founding-revealed-card');
+                card.classList.remove('founding-locked-card');
+                card.style.borderColor = 'rgba(250,204,21,0.6)';
+                card.style.background = 'linear-gradient(135deg, #0f1a2e 0%, #1a2540 50%, #0f1a2e 100%)';
+                card.style.cursor = 'default';
+                card.removeAttribute('onclick');
+                burst.remove();
+            }, 500);
+        }
+        */
+    </script>
+    <script type="module" src="/js/authModal.ts"></script>
+</body>
+
+</html>

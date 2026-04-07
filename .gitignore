@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.agent/
+*.bak
+.cache/
+
+# REMi Audit System — tokens are never committed
+.remi-audit/config.json
+
+# Supabase temp
+supabase/.temp/
+
+# Worktrees
+.worktrees/
+
+# AI agent files — never committed
+.superpowers/
+.claude/
+docs/superpowers/
+
+# Proprietary engine files — copied at deploy time, never committed
+supabase/functions/_shared/remi-score/engines/
+
+# Founder-only dashboard components — reveals engine internals
+components/founder/

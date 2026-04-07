@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+
+<html class="light scroll-smooth" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>REMi | Market Cycle Timing for Crypto & Stock Investors</title>
+    <meta name="description"
+        content="REMi helps everyday investors identify potential market tops and bottoms—so you know when to buy, sell or patiently do nothing, with confidence. No charts. Just algorithm-backed timing signals." />
+    <!-- Favicon -->
+    <link rel="icon" href="assets/landing/favicon/remi-favicon-transparent.png" type="image/png">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Material Symbols -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Config -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-hover": "#0f4bc4",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+
+<body
+    class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-x-hidden antialiased selection:bg-primary selection:text-white">
+    <div class="relative flex min-h-screen flex-col">
+        <!-- Navbar -->
+        <header
+            class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <!-- Logo -->
+                    <div class="flex items-center gap-3">
+                        <img src="assets/landing/logos/remi-text-logo.png" alt="REMi"
+                            class="h-12 w-auto object-contain dark:invert-0 invert" />
+                    </div>
+                    <!-- Desktop Nav -->
+                    <nav class="hidden md:flex gap-8 items-center">
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="#about">About</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="#how-it-works">How It Works</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="pricing.html">Pricing</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="#perspectives">Perspectives</a>
+                        <a class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors"
+                            href="#faq">FAQ</a>
+                    </nav>
+                    <!-- CTA -->
+                    <div class="flex items-center gap-4">
+                        <a id="login-btn" class="hidden sm:block text-sm font-medium text-slate-900 dark:text-white hover:text-primary cursor-pointer"
+                            href="#">Login</a>
+                        <button id="signup-btn"
+                            class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all transform active:scale-95 shadow-lg shadow-primary/20">
+                            Sign Up
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <main class="flex-grow">
+            <!-- Hero Section -->
+            <section class="relative pt-8 pb-12 lg:pt-16 lg:pb-20 overflow-hidden"
+                style="background: radial-gradient(ellipse at 85% 85%, #1e4fd8 0%, #0d2b7a 40%, #0a1628 100%);">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div class="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+                        <!-- Content -->
+                        <div class="flex flex-col gap-6 text-center lg:text-left">
+                            <div
+                                class="animate-fade-up delay-100 inline-flex items-center justify-center lg:justify-start gap-2 text-white font-bold text-sm uppercase tracking-wider">
+                                <span class="bg-white/20 px-3 py-1 rounded-full inline-flex items-center gap-2">
+                                    <span class="relative flex h-2 w-2">
+                                        <span
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    Beta Access Open
+                                </span>
+                            </div>
+                            <h1
+                                class="animate-fade-up delay-200 text-4xl md:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tight text-white">
+                                Investing is chaotic. <br />
+                                <span class="text-sky-300">REMi simplifies it <span
+                                        class="font-black hover:text-yellow-300 transition-colors duration-300 cursor-default relative inline-block">into
+                                        one number.<svg
+                                            class="absolute -bottom-2 left-0 w-full h-3 text-sky-400/50 -z-10"
+                                            preserveaspectratio="none" viewbox="0 0 100 10">
+                                            <path d="M0 5 Q 50 10 100 5" fill="none" stroke="currentColor"
+                                                stroke-width="8"></path>
+                                        </svg></span></span>
+                            </h1>
+                            <p
+                                class="animate-fade-up delay-300 text-lg md:text-xl text-blue-100 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                                Meet your new financial sidekick. REMi gives you clarity on when to buy, sell, or sit
+                                tight. No more wasted hours staring at charts. No more second guessing markets. Enter
+                                your email for limited time free access.
+                            </p>
+                            <p
+                                class="animate-fade-up delay-300 text-xs text-blue-200/70 max-w-2xl mx-auto lg:mx-0 italic">
+                                REMi's decisions are algorithmically driven. Nothing is guaranteed. REMi does not
+                                provide financial advice.
+                            </p>
+                            <!-- Email Form -->
+                            <div
+                                class="animate-fade-up delay-400 mt-4 flex flex-col sm:flex-row gap-3 max-w-md mx-auto lg:mx-0 w-full">
+                                <div class="relative flex-grow">
+                                    <div
+                                        class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                        <span class="material-symbols-outlined">mail</span>
+                                    </div>
+                                    <input
+                                        class="w-full h-12 pl-10 pr-4 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-slate-900 dark:text-white placeholder-slate-400"
+                                        placeholder="Enter your email" type="email" />
+                                </div>
+                                <button
+                                    class="h-12 px-6 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-base transition-all shadow-xl shadow-primary/20 whitespace-nowrap">
+                                    Get Early Access
+                                </button>
+                            </div>
+                            <p class="animate-fade-up delay-500 text-xs text-blue-200 font-medium">Used by traders who
+                                like clarity, not chaos.</p>
+                        </div>
+                        <!-- Image/Visual -->
+                        <!-- Replaced with Character Image at section bottom -->
+                        <!-- Character Image -->
+                        <!-- Glow Effect (Desktop) -->
+                        <div
+                            class="hidden lg:block absolute -bottom-[26.5rem] right-[-35%] w-[100%] z-10 pointer-events-none">
+                            <div
+                                class="absolute -top-[5%] right-[10%] bottom-[30%] left-[5%] bg-white/40 blur-[100px] rounded-full">
+                            </div>
+                        </div>
+                        <!-- Dashboard Preview Tiles (Placeholders) -->
+                        <div class="hidden lg:block absolute top-8 right-[18%] z-30 animate-float">
+                            <!-- REMi Score Tile -->
+                            <div
+                                class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 w-72 border border-slate-200 -rotate-3 flex items-center gap-4 transition-transform duration-300 hover:scale-105 cursor-default">
+                                <!-- BTC Logo -->
+                                <img src="assets/landing/logos/btc-logo.png" alt="Bitcoin"
+                                    class="w-10 h-10 shrink-0 shadow-sm rounded-full">
+                                <div>
+                                    <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">REMI SCORE</p>
+                                    <div class="flex items-end gap-2">
+                                        <span class="text-4xl font-black text-green-500">92</span>
+                                        <span class="text-sm text-slate-600 mb-1">/ 100</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-1">Strong Buy</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hidden lg:block absolute top-56 right-[28%] z-30 animate-float">
+                            <!-- Macro Outlook Tile -->
+                            <div
+                                class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 w-48 border border-slate-200 rotate-[5deg] transition-transform duration-300 hover:scale-105 cursor-default">
+                                <p class="text-xs text-slate-500 uppercase tracking-wide mb-2">Macro Outlook</p>
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-green-500">trending_up</span>
+                                    <span class="text-lg font-bold text-slate-800">Bullish</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hidden lg:block absolute top-40 right-0 z-30 animate-float-slow">
+                            <!-- Insight Tile -->
+                            <div
+                                class="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 w-72 border border-slate-200 -rotate-2 transition-transform duration-300 hover:scale-105 cursor-default">
+                                <p class="text-xs text-slate-500 uppercase tracking-wide mb-2">REMi Report</p>
+                                <div class="flex items-start gap-2">
+                                    <p class="text-xs font-bold text-slate-800 leading-snug">
+                                        These are great levels to DCA. Gold, Silver, DXY look weak. A bottom is nearing
+                                        for stocks & crypto.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Character Image (Desktop aligned to bottom) -->
+                        <img src="assets/landing/characters/character.png" alt="Financial Sidekick"
+                            style="clip-path: inset(10% 20% 40% 15% round 100px 100px 0 0);"
+                            class="animate-slide-in-right delay-700 hidden lg:block absolute -bottom-[26.5rem] right-[-35%] w-[100%] z-20 select-none pointer-events-none" />
+
+                        <!-- Character Image (Mobile/Tablet inline) -->
+                        <div class="lg:hidden flex justify-center mt-8 relative">
+                            <div
+                                class="absolute inset-x-[5%] -top-[10%] -bottom-[10%] bg-white/40 blur-3xl rounded-full">
+                            </div>
+                            <img src="assets/landing/characters/character.png" alt="Financial Sidekick"
+                                class="animate-fade-up delay-500 w-[70%] sm:w-[50%] relative z-20 pointer-events-none select-none" />
+                        </div>
+                    </div>
+            </section>
+
+            <!-- Dashboard Video Section -->
+            <section id="how-it-works" class="scroll-mt-20 pt-8 pb-16 lg:pt-12 lg:pb-24 bg-background-light">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <p class="text-slate-600 max-w-2xl mx-auto text-center mb-8">Watch how REMi simplifies your trading
+                        decisions with one clear number.</p>
+                    <div
+                        class="relative rounded-2xl overflow-hidden shadow-2xl shadow-slate-400/30 border border-slate-200">
+                        <!-- Placeholder video - replace src with your actual dashboard video -->
+                        <video class="w-full aspect-video object-cover" autoplay loop muted playsinline>
+                            <!-- Placeholder stock video - replace with your actual video -->
+                            <source src="https://cdn.coverr.co/videos/coverr-stock-market-data-on-screen-4882/1080p.mp4"
+                                type="video/mp4">
+                        </video>
+                        <!-- Optional overlay gradient for polish -->
+                        <div
+                            class="absolute inset-0 bg-gradient-to-t from-slate-900/20 to-transparent pointer-events-none">
+                        </div>
+                    </div>
+                    <div class="text-center mt-8">
+                        <button
+                            class="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-bold text-base transition-all shadow-lg shadow-primary/20">
+                            <span>See the dashboard</span>
+                            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section id="about" class="scroll-mt-20 py-20 bg-white dark:bg-surface-dark">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center max-w-3xl mx-auto mb-16">
+                        <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-4">Why choose REMi?
+                        </h2>
+                        <p class="text-lg text-slate-600 dark:text-slate-300">REMi increases the probability for you to
+                            act rationally and decisively at moments that matter the most that affect lifetime wealth.
+                        </p>
+                    </div>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        <!-- Feature 1 -->
+                        <div
+                            class="group p-8 rounded-2xl bg-background-light dark:bg-background-dark border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
+                            <img src="assets/landing/images/features/feature-transparent.jpg" alt="Transparent Analysis"
+                                class="w-full h-48 object-cover rounded-xl mb-6 shadow-sm brightness-90 group-hover:brightness-110 transition-all">
+
+                            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Transparent Analysis</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                REMi's Confidence Score is built from clearly defined market indicators and historical
+                                pattern analysis. You can see what factors are contributing, so the score is
+                                understandable—not a black box.
+                            </p>
+                        </div>
+                        <!-- Feature 2 -->
+                        <div
+                            class="group p-8 rounded-2xl bg-background-light dark:bg-background-dark border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
+                            <img src="assets/landing/images/features/feature-decade.jpg" alt="Major Market Decisions"
+                                class="w-full h-48 object-cover rounded-xl mb-6 shadow-sm brightness-90 group-hover:brightness-110 transition-all">
+
+                            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Once-in-a-Decade Decisions
+                            </h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                REMi focuses on major market moments—cycle shifts, trend changes, and high-probability
+                                setups—so you are not reacting to short-term noise. It often identifies market bottoms
+                                and tops with confidence, helping you enter/exit when it matters most.
+                            </p>
+                        </div>
+                        <!-- Feature 3 -->
+                        <div
+                            class="group p-8 rounded-2xl bg-background-light dark:bg-background-dark border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
+                            <img src="assets/landing/images/features/feature-decisions.jpg" alt="Save Time"
+                                class="w-full h-48 object-cover rounded-xl mb-6 shadow-sm brightness-90 group-hover:brightness-110 transition-all">
+
+                            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Save Time Without
+                                Guesswork</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                REMi continuously monitors markets and watches your back 24/7 with daily updates so you
+                                can stay informed without watching charts or news all day.
+                            </p>
+                        </div>
+                        <!-- Feature 4 -->
+                        <div
+                            class="group p-8 rounded-2xl bg-background-light dark:bg-background-dark border border-slate-200 dark:border-slate-700 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
+                            <img src="assets/landing/images/features/feature-time.jpg" alt="Daily Macro Analysis"
+                                class="w-full h-48 object-cover rounded-xl mb-6 shadow-sm brightness-90 group-hover:brightness-110 transition-all">
+
+                            <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-3">Daily Macro Analysis
+                                Report</h3>
+                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                REMi analyzes Macro indicators and generates a report providing daily insights that can
+                                be viewed directly on REMi's Dashboard or sent to your email.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Why Technical Analysis Works Section -->
+            <section id="perspectives"
+                class="scroll-mt-20 py-20 bg-background-light dark:bg-background-dark overflow-hidden">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-6">Why Technical
+                            Analysis Works</h2>
+                    </div>
+
+                    <!-- Carousel Container -->
+                    <div class="relative max-w-3xl mx-auto overflow-hidden" id="ta-carousel-container">
+                        <!-- Track -->
+                        <div class="flex transition-transform duration-[0ms] ease-out cursor-grab active:cursor-grabbing"
+                            id="carousel-track"
+                            style="transform: translateX(-100%); transition: transform 0ms ease-out 0s;">
+                            <!-- Start at index 1 (-100%) -->
+
+                            <!-- Clone of Slide 3 (Trend Momentum) -->
+                            <div class="carousel-slide min-w-full p-4 flex items-center justify-center select-none"
+                                data-id="3">
+                                <div
+                                    class="bg-white dark:bg-surface-dark p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group w-full h-[600px] flex flex-col justify-center select-none">
+                                    <div
+                                        class="absolute top-0 right-0 p-8 opacity-10 font-black text-9xl text-slate-900 dark:text-white leading-none -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none">
+                                        3</div>
+                                    <h3
+                                        class="text-2xl font-bold text-slate-900 dark:text-white mb-4 relative z-10 pointer-events-none">
+                                        Trend Momentum</h3>
+                                    <p
+                                        class="text-lg text-slate-600 dark:text-slate-400 relative z-10 leading-relaxed pointer-events-none">
+                                        Prices tend to move in trends rather than randomly. Studies show that following
+                                        the primary trend significantly outperforms buy-and-hold strategies in volatile
+                                        markets.
+                                    </p>
+                                    <img src="assets/landing/images/slides/slide-trend.png" alt="Trend Momentum Chart"
+                                        class="mt-6 w-full aspect-video rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 relative z-10">
+                                    <p
+                                        class="text-xs text-slate-400 dark:text-slate-500 italic mt-2 text-center relative z-10 pointer-events-none">
+                                        Don't worry you don't need to read charts. REMi does that for you. This is just
+                                        a visual to drive the point home.</p>
+                                </div>
+                            </div>
+
+                            <!-- Slide 1: Market Psychology -->
+                            <div class="carousel-slide min-w-full p-4 flex items-center justify-center select-none"
+                                data-id="1">
+                                <div
+                                    class="bg-white dark:bg-surface-dark p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group w-full h-[600px] flex flex-col justify-center select-none">
+                                    <div
+                                        class="absolute top-0 right-0 p-8 opacity-10 font-black text-9xl text-slate-900 dark:text-white leading-none -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none">
+                                        1</div>
+                                    <h3
+                                        class="text-2xl font-bold text-slate-900 dark:text-white mb-4 relative z-10 pointer-events-none">
+                                        Market Psychology</h3>
+                                    <p
+                                        class="text-lg text-slate-600 dark:text-slate-400 relative z-10 leading-relaxed pointer-events-none">
+                                        Markets aren't random. They're driven by human psychology—fear and greed
+                                        repeating in predictable patterns. Technical analysis isn't magic; it's the
+                                        science of measuring this behavior to probability-weight the future.
+                                    </p>
+                                    <img src="assets/landing/images/slides/slide-psychology.png"
+                                        alt="Market Psychology Chart"
+                                        class="mt-6 w-full aspect-video rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 relative z-10">
+                                    <p
+                                        class="text-xs text-slate-400 dark:text-slate-500 italic mt-2 text-center relative z-10 pointer-events-none">
+                                        Don't worry you don't need to read charts. REMi does that for you. This is just
+                                        a visual to drive the point home.</p>
+                                </div>
+                            </div>
+
+                            <!-- Slide 2: History Repeats Itself -->
+                            <div class="carousel-slide min-w-full p-4 flex items-center justify-center select-none"
+                                data-id="2">
+                                <div
+                                    class="bg-white dark:bg-surface-dark p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group w-full h-[600px] flex flex-col justify-center select-none">
+                                    <div
+                                        class="absolute top-0 right-0 p-8 opacity-10 font-black text-9xl text-slate-900 dark:text-white leading-none -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none">
+                                        2</div>
+                                    <h3
+                                        class="text-2xl font-bold text-slate-900 dark:text-white mb-4 relative z-10 pointer-events-none">
+                                        History Repeats Itself</h3>
+                                    <p
+                                        class="text-lg text-slate-600 dark:text-slate-400 relative z-10 leading-relaxed pointer-events-none">
+                                        Human emotions don't change. The same patterns of distribution and accumulation
+                                        have appeared in charts for over a century, allowing us to anticipate moves
+                                        before they happen.
+                                    </p>
+                                    <img src="assets/landing/images/slides/slide-history.png"
+                                        alt="History Repeats Itself Chart"
+                                        class="mt-6 w-full aspect-video rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 relative z-10">
+                                    <p
+                                        class="text-xs text-slate-400 dark:text-slate-500 italic mt-2 text-center relative z-10 pointer-events-none">
+                                        Don't worry you don't need to read charts. REMi does that for you. This is just
+                                        a visual to drive the point home.</p>
+                                </div>
+                            </div>
+
+                            <!-- Slide 3: Trend Momentum -->
+                            <div class="carousel-slide min-w-full p-4 flex items-center justify-center select-none"
+                                data-id="3">
+                                <div
+                                    class="bg-white dark:bg-surface-dark p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group w-full h-[600px] flex flex-col justify-center select-none">
+                                    <div
+                                        class="absolute top-0 right-0 p-8 opacity-10 font-black text-9xl text-slate-900 dark:text-white leading-none -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none">
+                                        3</div>
+                                    <h3
+                                        class="text-2xl font-bold text-slate-900 dark:text-white mb-4 relative z-10 pointer-events-none">
+                                        Trend Momentum</h3>
+                                    <p
+                                        class="text-lg text-slate-600 dark:text-slate-400 relative z-10 leading-relaxed pointer-events-none">
+                                        Prices tend to move in trends rather than randomly. Studies show that following
+                                        the primary trend significantly outperforms buy-and-hold strategies in volatile
+                                        markets.
+                                    </p>
+                                    <img src="assets/landing/images/slides/slide-trend.png" alt="Trend Momentum Chart"
+                                        class="mt-6 w-full aspect-video rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 relative z-10">
+                                    <p
+                                        class="text-xs text-slate-400 dark:text-slate-500 italic mt-2 text-center relative z-10 pointer-events-none">
+                                        Don't worry you don't need to read charts. REMi does that for you. This is just
+                                        a visual to drive the point home.</p>
+                                </div>
+                            </div>
+
+                            <!-- Clone of Slide 1 (Market Psychology) -->
+                            <div class="carousel-slide min-w-full p-4 flex items-center justify-center select-none"
+                                data-id="1">
+                                <div
+                                    class="bg-white dark:bg-surface-dark p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group w-full h-[600px] flex flex-col justify-center select-none">
+                                    <div
+                                        class="absolute top-0 right-0 p-8 opacity-10 font-black text-9xl text-slate-900 dark:text-white leading-none -mr-4 -mt-4 transition-transform group-hover:scale-110 pointer-events-none">
+                                        1</div>
+                                    <h3
+                                        class="text-2xl font-bold text-slate-900 dark:text-white mb-4 relative z-10 pointer-events-none">
+                                        Market Psychology</h3>
+                                    <p
+                                        class="text-lg text-slate-600 dark:text-slate-400 relative z-10 leading-relaxed pointer-events-none">
+                                        Markets aren't random. They're driven by human psychology—fear and greed
+                                        repeating in predictable patterns. Technical analysis isn't magic; it's the
+                                        science of measuring this behavior to probability-weight the future.
+                                    </p>
+                                    <img src="assets/landing/images/slides/slide-psychology.png"
+                                        alt="Market Psychology Chart"
+                                        class="mt-6 w-full aspect-video rounded-xl object-contain bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 relative z-10">
+                                    <p
+                                        class="text-xs text-slate-400 dark:text-slate-500 italic mt-2 text-center relative z-10 pointer-events-none">
+                                        Don't worry you don't need to read charts. REMi does that for you. This is just
+                                        a visual to drive the point home.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dots Navigation -->
+                        <div class="flex justify-center gap-3 mt-4">
+                            <button
+                                class="carousel-dot block w-3 h-3 rounded-full bg-primary transition-all duration-300 transform hover:scale-125"
+                                aria-label="Slide 1" data-index="0"></button>
+                            <button
+                                class="carousel-dot block w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 transition-all duration-300 transform hover:scale-125"
+                                aria-label="Slide 2" data-index="1"></button>
+                            <button
+                                class="carousel-dot block w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 transition-all duration-300 transform hover:scale-125"
+                                aria-label="Slide 3" data-index="2"></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Understanding REMi Section -->
+            <section id="faq" class="scroll-mt-20 py-20 bg-white dark:bg-surface-dark">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16">
+                        <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-4">Understanding
+                            REMi</h2>
+                        <p class="text-lg text-slate-600 dark:text-slate-300">Simple signals for complex markets.</p>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-12 items-center">
+                        <!-- Chart Visual -->
+                        <div
+                            class="bg-background-light dark:bg-background-dark rounded-3xl p-8 border border-slate-200 dark:border-slate-800 relative">
+                            <!-- Chart Visual -->
+                            <img src="assets/landing/images/charts/remi-btc-chart-updated.jpg"
+                                alt="Bitcoin Chart showing REMi signals"
+                                class="w-full h-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm" />
+
+                            <!-- Signal Badge -->
+                            <div
+                                class="absolute -bottom-6 -right-6 bg-white dark:bg-surface-dark p-4 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800">
+                                <div class="flex items-center gap-3">
+                                    <span class="flex h-3 w-3 rounded-full bg-green-500"></span>
+                                    <p class="font-bold text-slate-900 dark:text-white text-sm">Signal Generated</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FAQ -->
+                        <div class="space-y-6 h-[500px] overflow-y-auto pr-4 cursor-grab active:cursor-grabbing font-sans select-none"
+                            id="faq-container">
+                            <!-- FAQ Item 1 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">What exactly is REMi?
+                                </h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    REMi is Really Easy Market Intelligence. It is an algorithmic market monitor
+                                    that analyzes price action, volume, and momentum to identify high-probability trend
+                                    shifts. Think of it as a weather forecast for markets—it does not predict the
+                                    future, but it helps you prepare for likely conditions ahead.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 2 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Do I need trading
+                                    experience or chart knowledge to use REMi?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    No. REMi is designed to simplify decision-making. If you can understand a green
+                                    light versus a red light, you can understand REMi’s confidence score.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 3 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">What is behind REMi’s
+                                    confidence score?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    REMi continuously evaluates multiple technical signals—such as support and
+                                    resistance, divergences, sentiment shifts, and historical chart patterns—across
+                                    different timeframes. When signals align, the confidence score reflects that
+                                    accordingly.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 4 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Does REMi place trades
+                                    or manage my money?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    No. REMi does not place trades, execute orders, or control your funds. It provides
+                                    information and confidence signals so you remain fully in control of every decision.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 5 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">How often are REMi
+                                    scores updated?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    REMi updates every minute. You do not need to monitor markets all day. Set your
+                                    alerts and check in every once in a while—that's all you'll need.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 6 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">How accurate is REMi?
+                                </h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    No trading tool is 100%. We aim to shift the probabilities in your favor. Most
+                                    traders guess; REMi calculates. The goal is not to win every trade-it is to manage
+                                    risk and improve long-term outcomes.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 7 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">What timeframes is
+                                    REMi optimized for?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    REMi is designed to catch cyclical bottoms/tops and catch macro swing trades. The
+                                    shortest swing trade from entry to exit could be a week. The longest, years. Day
+                                    trading is not what REMi is optimized for - at least not yet.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 8 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">What makes REMi
+                                    different from other trading tools?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Most tools overwhelm users with dozens of indicators and conflicting signals. REMi
+                                    condenses complex analysis into one clear, actionable Confidence Score, helping you
+                                    focus on higher-probability moments instead of reacting to market noise and making
+                                    emotion-based decisions.
+                                </p>
+                            </div>
+                            <!-- FAQ Item 9 -->
+                            <div class="border-b border-slate-200 dark:border-slate-800 pb-6">
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">What markets can I use
+                                    REMi for?</h3>
+                                <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    REMi is currently optimized for Crypto, Stocks, and Metals. Under the hood, it can
+                                    analyze any market that has reliable price data and chart history.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- CTA Section -->
+            <section
+                class="py-20 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 class="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Ready to trade with
+                        confidence?</h2>
+                    <p class="text-xl text-slate-600 dark:text-slate-300 mb-10">Get early access to REMi for smarter
+                        buys, faster exits and less stress.</p>
+                    <form class="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+                        <div class="relative flex-grow">
+                            <input
+                                class="w-full h-14 pl-6 pr-4 rounded-xl border-none bg-white dark:bg-surface-dark shadow-sm focus:ring-2 focus:ring-primary outline-none text-slate-900 dark:text-white placeholder-slate-400 text-lg"
+                                placeholder="Enter your email" type="email" />
+                        </div>
+                        <button
+                            class="h-14 px-8 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-lg transition-all shadow-xl shadow-primary/20 whitespace-nowrap"
+                            type="button">
+                            Get Free Access
+                        </button>
+                    </form>
+                    <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">No spam, just daily clarity.</p>
+                </div>
+            </section>
+        </main>
+        <footer class="bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-slate-800 py-12">
+            <div
+                class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <img src="assets/landing/logos/remi-text-logo.png" alt="REMi"
+                        class="h-8 w-auto object-contain dark:invert-0 invert" />
+                </div>
+                <div class="flex gap-8 text-slate-600 dark:text-slate-400">
+                    <a class="hover:text-primary transition-colors" href="privacy.html">Privacy</a>
+                    <a class="hover:text-primary transition-colors" href="terms.html">Terms</a>
+                    <a class="hover:text-primary transition-colors" href="#">Twitter</a>
+                    <a class="hover:text-primary transition-colors" href="#">Instagram</a>
+                </div>
+                <div class="flex flex-col items-center md:items-end gap-2">
+                    <p class="text-slate-500 text-sm">© 2026 REMi Inc.</p>
+                    <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span>Built by</span>
+                        <img src="assets/landing/logos/circadia-logo.png" alt="Circadia"
+                            class="h-4 w-auto opacity-70 hover:opacity-100 transition-opacity dark:invert" />
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <script src="js/landing.js"></script>
+    <script type="module" src="/js/authModal.ts"></script>
+</body>
+
+</html>
