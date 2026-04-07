@@ -14,6 +14,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14";
+import { reconcileEntitlements } from "../_shared/entitlements/index.ts";
+import type { PlanType } from "../_shared/entitlements/index.ts";
 
 // ─── Stripe price ID → plan mapping ──────────────────────────────────────────
 // Replace these with your actual Stripe Price IDs from the dashboard
@@ -120,6 +122,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         subscription_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     });
 
+    await reconcileEntitlements(supabase, userId, plan as PlanType);
+
     console.log(`User ${userId} upgraded to ${plan}`);
 }
 
@@ -139,12 +143,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         return;
     }
 
+    const newPlan = isActive ? plan : "free";
     await supabase.from("profiles").update({
-        plan: isActive ? plan : "free",
+        plan: newPlan,
         subscription_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     }).eq("id", data.id);
 
-    console.log(`User ${data.id} plan set to ${isActive ? plan : "free"} (status: ${subscription.status})`);
+    await reconcileEntitlements(supabase, data.id, newPlan as PlanType);
+
+    console.log(`User ${data.id} plan set to ${newPlan} (status: ${subscription.status})`);
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -164,6 +171,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         stripe_subscription_id: null,
         subscription_period_end: null,
     }).eq("id", data.id);
+
+    await reconcileEntitlements(supabase, data.id, "free" as PlanType);
 
     console.log(`User ${data.id} downgraded to free (subscription cancelled)`);
 }
