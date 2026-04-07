@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-ENGINE_SRC=~/remi-engine/src
+ENGINE_SRC="${REMI_ENGINE_SRC:-$HOME/.remi-engine/src}"
 DEST="$(dirname "$0")/../supabase/functions/_shared/remi-score/engines"
 
 if [ ! -d "$ENGINE_SRC" ]; then
-  echo "ERROR: remi-engine not found at $ENGINE_SRC"
-  echo "Make sure ~/remi-engine/ exists with the scoring engine source."
+  echo "ERROR: engine source not found at $ENGINE_SRC"
+  echo "Set REMI_ENGINE_SRC to your local engine source directory."
   exit 1
 fi
 

@@ -317,7 +317,7 @@ The `evaluate-alerts` edge function is triggered by an external cron service:
 
 - **Provider:** cron-job.org
 - **Interval:** Every 1 minute
-- **URL:** `https://adtrlhbnnxqznupheolh.supabase.co/functions/v1/evaluate-alerts`
+- **URL:** `https://<project-ref>.supabase.co/functions/v1/evaluate-alerts`
 - **Method:** POST
 - **Required Header:** `Authorization: Bearer <anon JWT>`
 - **Expiry:** 2037
