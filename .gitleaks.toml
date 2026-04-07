@@ -1,0 +1,62 @@
+title = "REMi gitleaks config"
+
+# Extend the default gitleaks ruleset (covers AWS, GitHub, Stripe, generic API keys, etc.)
+[extend]
+useDefault = true
+
+# ── Custom rules for REMi-specific leakage ──────────────────────────
+
+[[rules]]
+id = "remi-private-engine-path"
+description = "Reference to the private remi-engine source path or env var"
+regex = '''(?i)(\bREMI_ENGINE_SRC\b|(~|/Users/[A-Za-z0-9._-]+|\$HOME)/\.?remi-engine(/|\b))'''
+tags = ["proprietary", "remi"]
+
+[[rules]]
+id = "remi-old-supabase-project-ref"
+description = "Previously leaked Supabase project ref"
+regex = '''(?i)\badtrlhbnnxqznupheolh\b'''
+tags = ["infra", "remi"]
+
+[[rules]]
+id = "remi-supabase-project-url"
+description = "Concrete Supabase project URL (any 20-char ref)"
+regex = '''https://[a-z0-9]{20}\.supabase\.co'''
+tags = ["infra", "remi"]
+
+[[rules]]
+id = "remi-divergence-engine-functions"
+description = "Function names from the private divergence engine"
+regex = '''(?i)\b(runBearishDivergence|runBullishDivergence|scoreBearishDivergence|scoreBullishDivergence|scoreDivergence)\s*\('''
+tags = ["proprietary", "remi"]
+
+[[rules]]
+id = "remi-engine-import-shape"
+description = "Import patterns typical of copied engine source"
+regex = '''(?i)from\s+["']\.\./(divergence|shared|scoring)/[A-Za-z0-9_./-]+["']'''
+tags = ["proprietary", "remi"]
+
+[[rules]]
+id = "remi-engine-config-constants"
+description = "Engine CONFIG constants (anchor threshold, lookback, tracking window, reset)"
+regex = '''(?i)\b(ANCHOR_THRESHOLD|ANCHOR_LOOKBACK|TRACKING_WINDOW|RESET_THRESHOLD|RSI_PERIOD)\b\s*[:=]\s*\d+'''
+tags = ["proprietary", "remi"]
+
+# ── Global allowlist ────────────────────────────────────────────────
+# Files that are intentionally allowed to mention these patterns:
+#   - CLAUDE.md / SECURITY docs: must describe what's forbidden
+#   - .gitleaks.toml: this file
+#   - remi-engine-stub/: public-safe placeholder
+#   - .git/hooks/: local hook implementation
+#   - docs/alerts-system.md: uses <project-ref> placeholder
+
+[allowlist]
+description = "Files allowed to reference forbidden patterns by design"
+paths = [
+  '''(?i)CLAUDE\.md$''',
+  '''(?i)SECURITY\.md$''',
+  '''^\.gitleaks\.toml$''',
+  '''^\.github/workflows/security\.yml$''',
+  '''^remi-engine-stub/''',
+  '''^\.git/hooks/''',
+]

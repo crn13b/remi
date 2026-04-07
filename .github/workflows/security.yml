@@ -1,0 +1,112 @@
+name: Security Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  gitleaks:
+    name: Gitleaks scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # Only scan new commits, not full history (history contains pre-fix items
+          # in commit c3a5b60 — the URL is not a secret, only the service role key is).
+          GITLEAKS_NOTIFY_USER_LIST: '@crn13b'
+
+  forbidden-paths:
+    name: Forbidden paths check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed files
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
+          fi
+          # Only check added/modified files, not deletions
+          git diff --name-only --diff-filter=AM "$BASE" "$HEAD" > changed.txt
+          echo "Changed files:"
+          cat changed.txt
+
+      - name: Check for forbidden paths
+        run: |
+          set -e
+          FORBIDDEN_REGEX='^(components/founder/|supabase/functions/_shared/remi-score/engines/|\.env($|\.[^/]+$)|\.worktrees/|docs/superpowers/|scripts/deploy-edge-functions\.sh)'
+          ALLOW_REGEX='^\.env\.example$'
+
+          violations=$(grep -E "$FORBIDDEN_REGEX" changed.txt | grep -vE "$ALLOW_REGEX" || true)
+
+          if [ -n "$violations" ]; then
+            echo "::error::Forbidden paths in commit:"
+            echo "$violations"
+            echo ""
+            echo "These paths must never be committed to the public repo."
+            echo "See CLAUDE.md for the full rule list."
+            exit 1
+          fi
+
+          echo "No forbidden paths in changed files."
+
+      - name: Check for forbidden patterns in changed files
+        run: |
+          set -e
+          # Patterns that must never appear in committed code
+          PATTERNS=(
+            'REMI_ENGINE_SRC'
+            'remi-engine/src'
+            '\.remi-engine'
+            'runBearishDivergence'
+            'runBullishDivergence'
+            'ANCHOR_THRESHOLD'
+            'ANCHOR_LOOKBACK'
+            'TRACKING_WINDOW'
+            'RESET_THRESHOLD'
+          )
+
+          # Files allowed to mention these patterns (docs describing what's forbidden)
+          ALLOW='^(CLAUDE\.md|SECURITY\.md|\.gitleaks\.toml|\.github/workflows/security\.yml|remi-engine-stub/)'
+
+          fail=0
+          for file in $(cat changed.txt); do
+            [ ! -f "$file" ] && continue
+            echo "$file" | grep -qE "$ALLOW" && continue
+
+            for pat in "${PATTERNS[@]}"; do
+              if grep -qE "$pat" "$file" 2>/dev/null; then
+                echo "::error file=$file::Forbidden pattern '$pat' found"
+                fail=1
+              fi
+            done
+          done
+
+          if [ $fail -eq 1 ]; then
+            echo ""
+            echo "Fix: replace these references or move the file out of the public repo."
+            exit 1
+          fi
+
+          echo "No forbidden patterns in changed files."
