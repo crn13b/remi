@@ -56,6 +56,7 @@ paths = [
   '''(?i)CLAUDE\.md$''',
   '''(?i)SECURITY\.md$''',
   '''^\.gitleaks\.toml$''',
+  '''^\.github/workflows/security\.yml$''',
   '''^remi-engine-stub/''',
   '''^\.git/hooks/''',
 ]

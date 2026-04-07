@@ -47,7 +47,8 @@ jobs:
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
             BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
           fi
-          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          # Only check added/modified files, not deletions
+          git diff --name-only --diff-filter=AM "$BASE" "$HEAD" > changed.txt
           echo "Changed files:"
           cat changed.txt
 
