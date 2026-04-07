@@ -67,3 +67,15 @@ This is a **public** GitHub repo (`crn13b/remi`). Before ANY `git add`, `git com
 - PR refs (`refs/pull/N/head`) survive branch deletion. Force-push does NOT scrub leaked secrets — rotation is the only real fix.
 - Two-codebase split: `~/remi/` is public, `~/remi-engine/` is private local-only. Never reference `remi-engine` paths in committed files.
 - The `remi-engine-stub/` directory in this repo is the public-safe placeholder. Never replace stub values with real engine values.
+- The deploy script and superpowers planning docs live in `~/remi-private-docs/`, NOT in this repo.
+- Score → sentiment label thresholds in `supabase/functions/_shared/remi-score/engine.ts` (`scoreToSentiment`, `scoreToColor`) are intentionally public — they only map the final score to a display label, not engine internals.
+
+## Enforcement Layers (in order of strength)
+
+1. **GitHub Push Protection** — server-side, blocks pushes containing known secret patterns. Already enabled.
+2. **Branch protection on `main`** — no force pushes, no deletions, PR-only merges. Already enabled.
+3. **GitHub Actions security workflow** (`.github/workflows/security.yml`) — runs gitleaks + forbidden-path check on every PR and push to main. Cannot be bypassed by `--no-verify`.
+4. **Local pre-commit hook** (`.git/hooks/pre-commit`) — blocks secrets, forbidden paths, and proprietary patterns before commit. Bypassable with `--no-verify` (avoid).
+5. **`.gitleaks.toml`** — defines all custom REMi-specific detection rules.
+6. **`.gitignore`** — blocks files from being staged at all.
+7. **This file (`CLAUDE.md`)** — instructs AI sessions to verify before committing.
