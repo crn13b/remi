@@ -19,6 +19,8 @@ import type { Aggressiveness } from "../_shared/alert-evaluation/intervals.ts";
 import { sendEmail } from "../_shared/notifications/resend.ts";
 import { sendDiscordDM, sendDiscordChannelMessage, refreshDiscordToken } from "../_shared/notifications/discord.ts";
 import { sendTelegramMessage } from "../_shared/notifications/telegram.ts";
+import { getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
+import type { EffectiveEntitlements } from "../_shared/entitlements/index.ts";
 
 const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -76,10 +78,16 @@ interface UserChannels {
     telegramEnabled: boolean;
 }
 
-async function dispatchToChannels(channels: UserChannels, subject: string, text: string): Promise<void> {
+async function dispatchToChannels(
+    channels: UserChannels,
+    subject: string,
+    text: string,
+    eff: EffectiveEntitlements,
+): Promise<void> {
     const promises: Promise<void>[] = [];
+    const tierChannels = eff.entitlements.channels;
 
-    if (channels.emailEnabled && channels.email) {
+    if (tierChannels.email && channels.emailEnabled && channels.email) {
         promises.push(
             sendEmail({ to: channels.email, subject, text }).then((ok) => {
                 if (!ok) console.error(`Email failed for ${channels.email}`);
@@ -87,7 +95,7 @@ async function dispatchToChannels(channels: UserChannels, subject: string, text:
         );
     }
 
-    if (channels.discordEnabled) {
+    if (tierChannels.discord && channels.discordEnabled) {
         // Prefer channel message if a channel ID is configured
         if (channels.discordChannelId) {
             promises.push(
@@ -131,7 +139,7 @@ async function dispatchToChannels(channels: UserChannels, subject: string, text:
         }
     }
 
-    if (channels.telegramEnabled && channels.telegramChatId) {
+    if (tierChannels.telegram && channels.telegramEnabled && channels.telegramChatId) {
         promises.push(
             sendTelegramMessage(channels.telegramChatId, text).then((ok) => {
                 if (!ok) console.error(`Telegram failed for chat ${channels.telegramChatId}`);
@@ -146,6 +154,33 @@ async function dispatchToChannels(channels: UserChannels, subject: string, text:
 
 Deno.serve(async (_req) => {
     try {
+        // 0. Expire alert trials: soft-disable alerts for free users whose
+        //    3-day alert trial window has lapsed.
+        try {
+            const cutoffIso = new Date(Date.now() - 3 * 86_400_000).toISOString();
+            const { data: expiredUsers, error: expiredErr } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("plan", "free")
+                .not("alert_trial_started_at", "is", null)
+                .lt("alert_trial_started_at", cutoffIso);
+            if (expiredErr) {
+                console.error("trial-expiry profile query failed:", expiredErr);
+            } else {
+                const expiredIds = (expiredUsers ?? []).map((p) => (p as { id: string }).id);
+                if (expiredIds.length) {
+                    const { error: updErr } = await supabase
+                        .from("alerts")
+                        .update({ is_active: false })
+                        .in("user_id", expiredIds)
+                        .eq("is_active", true);
+                    if (updErr) console.error("trial-expiry alert disable failed:", updErr);
+                }
+            }
+        } catch (e) {
+            console.error("trial-expiry step threw:", e);
+        }
+
         // 1. Load all active alerts with user prefs and connections
         const { data: alerts, error: alertsErr } = await supabase
             .from('alerts')
@@ -247,6 +282,16 @@ Deno.serve(async (_req) => {
             allRepeats.push(...repeats);
         }
 
+        // Entitlements cache (per cron run) — query is hot when many alerts share a user.
+        const effCache = new Map<string, EffectiveEntitlements>();
+        const getEff = async (userId: string): Promise<EffectiveEntitlements> => {
+            const cached = effCache.get(userId);
+            if (cached) return cached;
+            const eff = await getEffectiveEntitlements(supabase, userId);
+            effCache.set(userId, eff);
+            return eff;
+        };
+
         // 9. Process crossings — insert events + send notifications
         const urgencyLabels: Record<string, string> = { warning: 'Nudge', high: 'Warning', critical: 'Urgent' };
 
@@ -275,6 +320,7 @@ Deno.serve(async (_req) => {
 
             // Send external notifications if user has channels enabled
             if (prefs && (prefs.email_enabled || prefs.discord_enabled || prefs.telegram_enabled)) {
+                const eff = await getEff(alert.user_id);
                 const isQuietZone = eventType === 'all_clear';
                 const text = formatNotificationText(
                     alert.symbol, score, previousScore,
@@ -293,7 +339,7 @@ Deno.serve(async (_req) => {
                     discordConnectionId: discordConn?.id,
                     telegramChatId: telegramConn?.provider_user_id,
                     telegramEnabled: prefs.telegram_enabled,
-                }, subject, text);
+                }, subject, text, eff);
             }
 
             // Update alert
@@ -313,6 +359,7 @@ Deno.serve(async (_req) => {
             const telegramConn = userConns?.get('telegram');
 
             if (prefs && (prefs.email_enabled || prefs.discord_enabled || prefs.telegram_enabled)) {
+                const eff = await getEff(alert.user_id);
                 const text = formatNotificationText(
                     alert.symbol, score, null,
                     urgencyLabels[urgency] ?? urgency, direction, false,
@@ -330,7 +377,7 @@ Deno.serve(async (_req) => {
                     discordConnectionId: discordConn?.id,
                     telegramChatId: telegramConn?.provider_user_id,
                     telegramEnabled: prefs.telegram_enabled,
-                }, subject, text);
+                }, subject, text, eff);
             }
 
             // Update last_notified_at and last_score
