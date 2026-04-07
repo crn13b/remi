@@ -9,11 +9,12 @@ export async function isAlertTrialActive(
   const eff = await getEffectiveEntitlements(supabase, userId);
   if (eff.isOwner) return true;
   if (eff.entitlements.alertTrialDays === null) return true; // paid
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("alert_trial_started_at")
     .eq("id", userId)
     .single();
+  if (error) return false; // fail-closed: treat trial as inactive on DB error
   if (!data?.alert_trial_started_at) return true; // not started yet
   const startedAt = new Date(data.alert_trial_started_at).getTime();
   const expiresAt = startedAt + eff.entitlements.alertTrialDays * 86_400_000;
@@ -31,7 +32,7 @@ export async function canCreateAlert(
   }
   // Trial check (free only)
   if (!(await isAlertTrialActive(supabase, userId))) {
-    return { allowed: false, reason: "Your 3-day alert trial has expired. Upgrade to Core to reactivate.", code: "TRIAL_EXPIRED" };
+    return { allowed: false, reason: `Your ${eff.entitlements.alertTrialDays}-day alert trial has expired. Upgrade to Core to reactivate.`, code: "TRIAL_EXPIRED" };
   }
   // Distinct ticker count
   const { data: rows, error } = await supabase
@@ -64,13 +65,14 @@ export async function canLookupScore(
   }
   // Block on watchlisted symbols
   if (eff.entitlements.blockLookupsOnWatchlistedSymbols) {
-    const { data: assets } = await supabase
+    const { data: assets, error } = await supabase
       .from("watchlist_assets")
       .select("symbol, watchlists!inner(user_id, is_active)")
       .eq("watchlists.user_id", userId)
       .eq("watchlists.is_active", true)
       .eq("is_active", true)
       .eq("symbol", symbol.toUpperCase());
+    if (error) return { allowed: false, reason: "Could not check watchlist.", code: "DB_ERROR" };
     if (assets && assets.length > 0) {
       return {
         allowed: false,

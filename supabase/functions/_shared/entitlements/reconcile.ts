@@ -9,7 +9,9 @@ import { getEntitlements } from "./tiers.ts";
  * soft-disabled rows up to the new caps. Never deletes user data.
  *
  * Called from stripe-webhook on every plan transition (free->paid,
- * paid->free, paid->paid).
+ * paid->free, paid->paid). Throws on the first DB error so the webhook
+ * can retry — partial failure would leave the user in an inconsistent
+ * entitlement state.
  */
 export async function reconcileEntitlements(
   supabase: SupabaseClient,
@@ -19,11 +21,14 @@ export async function reconcileEntitlements(
   const target = getEntitlements(targetPlan);
 
   // ---- Alerts: cap distinct tickers ----
-  const { data: allAlerts } = await supabase
+  const { data: allAlerts, error: alertsSelectError } = await supabase
     .from("alerts")
     .select("id, symbol, is_active, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
+  if (alertsSelectError) {
+    throw new Error(`reconcileEntitlements: failed to load alerts for user ${userId}: ${alertsSelectError.message}`);
+  }
 
   if (allAlerts) {
     const keepTickers = new Set<string>();
@@ -43,19 +48,28 @@ export async function reconcileEntitlements(
       }
     }
     if (disableIds.length) {
-      await supabase.from("alerts").update({ is_active: false }).in("id", disableIds);
+      const { error } = await supabase.from("alerts").update({ is_active: false }).in("id", disableIds);
+      if (error) {
+        throw new Error(`reconcileEntitlements: failed to disable overflow alerts for user ${userId}: ${error.message}`);
+      }
     }
     if (reactivateIds.length) {
-      await supabase.from("alerts").update({ is_active: true }).in("id", reactivateIds);
+      const { error } = await supabase.from("alerts").update({ is_active: true }).in("id", reactivateIds);
+      if (error) {
+        throw new Error(`reconcileEntitlements: failed to reactivate alerts for user ${userId}: ${error.message}`);
+      }
     }
   }
 
   // ---- Watchlists: cap number of lists ----
-  const { data: allLists } = await supabase
+  const { data: allLists, error: listsSelectError } = await supabase
     .from("watchlists")
     .select("id, is_active, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
+  if (listsSelectError) {
+    throw new Error(`reconcileEntitlements: failed to load watchlists for user ${userId}: ${listsSelectError.message}`);
+  }
 
   const keepListIds: string[] = [];
   if (allLists) {
@@ -72,20 +86,29 @@ export async function reconcileEntitlements(
       }
     }
     if (disable.length) {
-      await supabase.from("watchlists").update({ is_active: false }).in("id", disable);
+      const { error } = await supabase.from("watchlists").update({ is_active: false }).in("id", disable);
+      if (error) {
+        throw new Error(`reconcileEntitlements: failed to disable overflow watchlists for user ${userId}: ${error.message}`);
+      }
     }
     if (reactivate.length) {
-      await supabase.from("watchlists").update({ is_active: true }).in("id", reactivate);
+      const { error } = await supabase.from("watchlists").update({ is_active: true }).in("id", reactivate);
+      if (error) {
+        throw new Error(`reconcileEntitlements: failed to reactivate watchlists for user ${userId}: ${error.message}`);
+      }
     }
   }
 
   // ---- Watchlist assets: cap tickers per kept list ----
   for (const listId of keepListIds) {
-    const { data: assets } = await supabase
+    const { data: assets, error: assetsSelectError } = await supabase
       .from("watchlist_assets")
       .select("id, is_active, created_at")
       .eq("watchlist_id", listId)
       .order("created_at", { ascending: true });
+    if (assetsSelectError) {
+      throw new Error(`reconcileEntitlements: failed to load watchlist_assets for list ${listId}: ${assetsSelectError.message}`);
+    }
     if (!assets) continue;
     const disable: string[] = [];
     const reactivate: string[] = [];
@@ -99,10 +122,16 @@ export async function reconcileEntitlements(
       }
     }
     if (disable.length) {
-      await supabase.from("watchlist_assets").update({ is_active: false }).in("id", disable);
+      const { error } = await supabase.from("watchlist_assets").update({ is_active: false }).in("id", disable);
+      if (error) {
+        throw new Error(`reconcileEntitlements: failed to disable overflow watchlist_assets for list ${listId}: ${error.message}`);
+      }
     }
     if (reactivate.length) {
-      await supabase.from("watchlist_assets").update({ is_active: true }).in("id", reactivate);
+      const { error } = await supabase.from("watchlist_assets").update({ is_active: true }).in("id", reactivate);
+      if (error) {
+        throw new Error(`reconcileEntitlements: failed to reactivate watchlist_assets for list ${listId}: ${error.message}`);
+      }
     }
   }
 
@@ -117,8 +146,11 @@ export async function reconcileEntitlements(
   if (!target.channels.discord) channelUpdates["discord_enabled"] = false;
   if (!target.channels.telegram) channelUpdates["telegram_enabled"] = false;
   if (Object.keys(channelUpdates).length > 0) {
-    await supabase
+    const { error } = await supabase
       .from("notification_preferences")
       .upsert({ user_id: userId, ...channelUpdates }, { onConflict: "user_id" });
+    if (error) {
+      throw new Error(`reconcileEntitlements: failed to upsert notification_preferences for user ${userId}: ${error.message}`);
+    }
   }
 }
