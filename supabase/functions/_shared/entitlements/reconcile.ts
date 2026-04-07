@@ -103,9 +103,9 @@ export async function reconcileEntitlements(
   for (const listId of keepListIds) {
     const { data: assets, error: assetsSelectError } = await supabase
       .from("watchlist_assets")
-      .select("id, is_active, created_at")
+      .select("id, is_active, added_at")
       .eq("watchlist_id", listId)
-      .order("created_at", { ascending: true });
+      .order("added_at", { ascending: true });
     if (assetsSelectError) {
       throw new Error(`reconcileEntitlements: failed to load watchlist_assets for list ${listId}: ${assetsSelectError.message}`);
     }
