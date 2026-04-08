@@ -10,6 +10,7 @@ import AggressivenessSlider from './AggressivenessSlider';
 import AlertTutorial, { TutorialRestartButton } from './AlertTutorial';
 import * as alertService from '../../services/alertService';
 import { supabase } from '../../services/supabaseClient';
+import { useEntitlements } from '../../hooks/useEntitlements';
 
 interface AlertsPageProps {
     theme: 'dark' | 'light';
@@ -331,6 +332,8 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
     userId,
 }) => {
     const isDark = theme === 'dark';
+    const { data: ent } = useEntitlements();
+    const entitlements = ent?.entitlements;
 
     const [showForm, setShowForm] = useState(false);
     const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
@@ -718,6 +721,7 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                                 </div>
 
                                 {/* Discord */}
+                                {entitlements?.channels.discord && (<>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={discordEnabled ? (isDark ? 'text-indigo-400' : 'text-indigo-600') : (isDark ? 'text-gray-600' : 'text-slate-400')}>
@@ -753,8 +757,11 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                                         Waiting for Discord authorization...
                                     </p>
                                 )}
+                                </>
+                                )}
 
                                 {/* Telegram */}
+                                {entitlements?.channels.telegram && (<>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={telegramEnabled ? (isDark ? 'text-sky-400' : 'text-sky-600') : (isDark ? 'text-gray-600' : 'text-slate-400')}>
@@ -826,6 +833,8 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                                             </button>
                                         </p>
                                     </div>
+                                )}
+                                </>
                                 )}
                             </div>
                         </div>

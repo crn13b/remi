@@ -1,6 +1,15 @@
 import { supabase } from "./supabaseClient";
+import { invoke } from "./_invoke";
 import type { EffectiveEntitlements } from "../types/entitlements";
 import { rehydrateEntitlements } from "../types/entitlements";
+
+export async function updateNotificationPrefs(input: {
+  email_enabled?: boolean;
+  discord_enabled?: boolean;
+  telegram_enabled?: boolean;
+}) {
+  return invoke("update-notification-prefs", input);
+}
 
 export async function fetchMe(): Promise<EffectiveEntitlements> {
   const { data: { session } } = await supabase.auth.getSession();

@@ -37,6 +37,7 @@ import OwnerBadge from "./components/dashboard/OwnerBadge";
 import AlertsPage from "./components/alerts/AlertsPage";
 import { Alert, AlertEvent, Aggressiveness, NudgeFrequency, NotificationPreferences, UserConnection } from "./components/alerts/types";
 import * as alertService from "./services/alertService";
+import { updateNotificationPrefs } from "./services/meService";
 import { searchCatalog, searchGeckoTerminal, searchBinance, type CatalogEntry } from "./data/assetCatalog";
 import { EntitlementsProvider } from "./contexts/EntitlementsContext";
 import { useEntitlements } from "./hooks/useEntitlements";
@@ -300,14 +301,24 @@ const App: React.FC = () => {
     const handleDiscordEnabledChange = async (enabled: boolean) => {
         setDiscordEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ discord_enabled: enabled }));
+            buildPrefs({ discord_enabled: enabled });
+            try {
+                await updateNotificationPrefs({ discord_enabled: enabled });
+            } catch (err) {
+                console.error('Failed to update discord pref:', err);
+            }
         }
     };
 
     const handleTelegramEnabledChange = async (enabled: boolean) => {
         setTelegramEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ telegram_enabled: enabled }));
+            buildPrefs({ telegram_enabled: enabled });
+            try {
+                await updateNotificationPrefs({ telegram_enabled: enabled });
+            } catch (err) {
+                console.error('Failed to update telegram pref:', err);
+            }
         }
     };
 
@@ -318,10 +329,12 @@ const App: React.FC = () => {
         // Auto-enable the channel that was just connected
         if (provider === 'discord') {
             setDiscordEnabled(true);
-            await alertService.upsertNotificationPrefs(buildPrefs({ discord_enabled: true }));
+            buildPrefs({ discord_enabled: true });
+            try { await updateNotificationPrefs({ discord_enabled: true }); } catch (err) { console.error(err); }
         } else if (provider === 'telegram') {
             setTelegramEnabled(true);
-            await alertService.upsertNotificationPrefs(buildPrefs({ telegram_enabled: true }));
+            buildPrefs({ telegram_enabled: true });
+            try { await updateNotificationPrefs({ telegram_enabled: true }); } catch (err) { console.error(err); }
         }
     };
 
