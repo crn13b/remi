@@ -377,6 +377,46 @@ verify_jwt = false
 [functions.discord-oauth-callback]
 verify_jwt = false
 
+# Bypass platform JWT validator (which still uses legacy HS256) for our
+# auth-required functions. Each function calls supabase.auth.getUser()
+# internally, which validates the JWT against GoTrue (current ES256 keys),
+# so security is preserved.
+[functions.me]
+verify_jwt = false
+
+[functions.update-notification-prefs]
+verify_jwt = false
+
+[functions.create-alert]
+verify_jwt = false
+
+[functions.update-alert]
+verify_jwt = false
+
+[functions.toggle-alert]
+verify_jwt = false
+
+[functions.delete-alert]
+verify_jwt = false
+
+[functions.evaluate-alerts]
+verify_jwt = false
+
+[functions.create-watchlist]
+verify_jwt = false
+
+[functions.rename-watchlist]
+verify_jwt = false
+
+[functions.delete-watchlist]
+verify_jwt = false
+
+[functions.add-watchlist-asset]
+verify_jwt = false
+
+[functions.remove-watchlist-asset]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
