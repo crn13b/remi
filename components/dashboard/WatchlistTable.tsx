@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Asset } from '../../types';
 import { ArrowUp, ArrowDown, MoreHorizontal, Bell, Trash2, List, Settings, Eye, EyeOff } from 'lucide-react';
+import { useEntitlements } from '../../hooks/useEntitlements';
 
 /* ─── Animated Score: rolls up from 0 to target ─── */
 const AnimatedScore: React.FC<{ target: number; duration?: number; className?: string }> = ({ target, duration = 800, className = '' }) => {
@@ -46,6 +47,9 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
     assets, theme = 'dark', onRemove, onAnalyze, onSetAlert, recentlyAdded, loadingSymbols = new Set(),
 }) => {
     const isLight = theme === 'light';
+    const { data: ent } = useEntitlements();
+    const entitlements = ent?.entitlements;
+    const atTickerCap = !!(entitlements && assets.length >= entitlements.maxTickersPerWatchlist);
     const [sortKey, setSortKey] = useState<SortKey | null>(null);
     const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -374,6 +378,12 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
 
     return (
         <div className="w-full">
+            {atTickerCap && (
+                <div className={`px-6 py-2 text-xs border-b ${isLight ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-amber-300 bg-amber-900/20 border-amber-900/30'}`}>
+                    You&apos;ve hit your ticker limit for this watchlist.{' '}
+                    <a href="/pricing.html?reason=watchlist-ticker-cap" className="underline font-semibold">Upgrade to add more</a>.
+                </div>
+            )}
             {/* Desktop */}
             <div className="hidden md:block">
                 <div className={`grid gap-5 items-center px-6 py-4 border-b text-[10px] font-semibold uppercase tracking-wider ${isLight ? 'text-slate-900 border-slate-100' : 'text-gray-500 border-white/5'}`} style={gridStyle}>
