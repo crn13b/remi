@@ -22,7 +22,15 @@ serve(async (req) => {
   if (!userData.user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
 
   const body = await req.json();
-  const { email_enabled, discord_enabled, telegram_enabled } = body ?? {};
+  const {
+    email_enabled,
+    discord_enabled,
+    telegram_enabled,
+    nudge_enabled,
+    nudge_frequency,
+    nudge_time,
+    global_aggressiveness,
+  } = body ?? {};
 
   const eff = await getEffectiveEntitlements(supabase, userData.user.id);
 
@@ -33,10 +41,27 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Telegram notifications require Core or higher.", code: "CHANNEL_BLOCKED" }), { status: 403, headers: cors });
   }
 
+  const ALLOWED_NUDGE_FREQUENCIES = new Set(["daily", "every_12h", "every_6h", "off"]);
+  const ALLOWED_AGGRESSIVENESS = new Set(["chill", "default", "aggressive", "relentless"]);
+
+  if (nudge_frequency !== undefined && !ALLOWED_NUDGE_FREQUENCIES.has(nudge_frequency)) {
+    return new Response(JSON.stringify({ error: "Invalid nudge_frequency", code: "INVALID_INPUT" }), { status: 400, headers: cors });
+  }
+  if (global_aggressiveness !== undefined && !ALLOWED_AGGRESSIVENESS.has(global_aggressiveness)) {
+    return new Response(JSON.stringify({ error: "Invalid global_aggressiveness", code: "INVALID_INPUT" }), { status: 400, headers: cors });
+  }
+  if (nudge_time !== undefined && (typeof nudge_time !== "string" || !/^\d{2}:\d{2}(:\d{2})?$/.test(nudge_time))) {
+    return new Response(JSON.stringify({ error: "Invalid nudge_time (expected HH:MM or HH:MM:SS)", code: "INVALID_INPUT" }), { status: 400, headers: cors });
+  }
+
   const updates: Record<string, unknown> = {};
   if (email_enabled !== undefined) updates.email_enabled = email_enabled;
   if (discord_enabled !== undefined) updates.discord_enabled = discord_enabled;
   if (telegram_enabled !== undefined) updates.telegram_enabled = telegram_enabled;
+  if (nudge_enabled !== undefined) updates.nudge_enabled = nudge_enabled;
+  if (nudge_frequency !== undefined) updates.nudge_frequency = nudge_frequency;
+  if (nudge_time !== undefined) updates.nudge_time = nudge_time;
+  if (global_aggressiveness !== undefined) updates.global_aggressiveness = global_aggressiveness;
 
   const { error } = await supabase
     .from("notification_preferences")

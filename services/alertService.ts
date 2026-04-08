@@ -160,14 +160,6 @@ export async function loadNotificationPrefs(userId: string): Promise<Notificatio
     return data;
 }
 
-export async function upsertNotificationPrefs(prefs: NotificationPreferences): Promise<void> {
-    const { error } = await supabase
-        .from('notification_preferences')
-        .upsert(prefs, { onConflict: 'user_id' });
-
-    if (error) console.error('Failed to upsert notification prefs:', error);
-}
-
 // ─── User Connections ───────────────────────────────────────────
 
 export async function loadUserConnections(userId: string): Promise<UserConnection[]> {

@@ -2,11 +2,16 @@ import { supabase } from "./supabaseClient";
 import { invoke } from "./_invoke";
 import type { EffectiveEntitlements } from "../types/entitlements";
 import { rehydrateEntitlements } from "../types/entitlements";
+import type { Aggressiveness, NudgeFrequency } from "../components/alerts/types";
 
 export async function updateNotificationPrefs(input: {
   email_enabled?: boolean;
   discord_enabled?: boolean;
   telegram_enabled?: boolean;
+  nudge_enabled?: boolean;
+  nudge_frequency?: NudgeFrequency;
+  nudge_time?: string;
+  global_aggressiveness?: Aggressiveness;
 }) {
   return invoke("update-notification-prefs", input);
 }

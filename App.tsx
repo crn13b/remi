@@ -264,21 +264,21 @@ const App: React.FC = () => {
     const handleNudgeEnabledChange = async (enabled: boolean) => {
         setNudgeEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ nudge_enabled: enabled }));
+            await updateNotificationPrefs({ nudge_enabled: enabled });
         }
     };
 
     const handleNudgeFrequencyChange = async (freq: NudgeFrequency) => {
         setNudgeFrequency(freq);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ nudge_frequency: freq }));
+            await updateNotificationPrefs({ nudge_frequency: freq });
         }
     };
 
     const handleNudgeTimeChange = async (time: string) => {
         setNudgeTime(time);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ nudge_time: time }));
+            await updateNotificationPrefs({ nudge_time: time });
         }
     };
 
@@ -289,14 +289,14 @@ const App: React.FC = () => {
         // Debounce DB writes for rapid slider drags
         if (aggressivenessDebounceRef.current) clearTimeout(aggressivenessDebounceRef.current);
         aggressivenessDebounceRef.current = setTimeout(() => {
-            alertService.upsertNotificationPrefs(buildPrefs({ global_aggressiveness: value }));
+            updateNotificationPrefs({ global_aggressiveness: value });
         }, 500);
     };
 
     const handleEmailEnabledChange = async (enabled: boolean) => {
         setEmailEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ email_enabled: enabled }));
+            await updateNotificationPrefs({ email_enabled: enabled });
         }
     };
 
