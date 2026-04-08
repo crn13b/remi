@@ -39,6 +39,7 @@ import { FounderDashboard } from "./components/founder/FounderDashboard";
 import { Alert, AlertEvent, Aggressiveness, NudgeFrequency, NotificationPreferences, UserConnection } from "./components/alerts/types";
 import * as alertService from "./services/alertService";
 import { searchCatalog, searchGeckoTerminal, searchBinance, type CatalogEntry } from "./data/assetCatalog";
+import { EntitlementsProvider } from "./contexts/EntitlementsContext";
 
 // ─── Watchlist Types ───
 import type { WatchlistGroup } from "./services/watchlistService";
@@ -696,6 +697,7 @@ const App: React.FC = () => {
     const baseTileClasses = `border cursor-default glass-panel ${theme === "light" ? "border-black/5 shadow-sm" : "border-[#27273a]"}`;
 
     return (
+        <EntitlementsProvider>
         <div className="flex h-screen w-screen bg-transparent text-sm overflow-hidden selection:bg-blue-500/30">
             {/* SIDEBAR */}
             <aside
@@ -1996,6 +1998,7 @@ const App: React.FC = () => {
 
 
         </div>
+        </EntitlementsProvider>
     );
 };
 
