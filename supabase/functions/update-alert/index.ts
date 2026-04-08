@@ -27,13 +27,27 @@ serve(async (req) => {
   if (!id) return new Response(JSON.stringify({ error: "missing id" }), { status: 400, headers: cors });
 
   const { data: existing } = await supabase
-    .from("alerts").select("user_id, symbol").eq("id", id).single();
+    .from("alerts").select("user_id, symbol, is_active").eq("id", id).single();
   if (!existing || (existing as { user_id: string }).user_id !== userData.user.id) {
     return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: cors });
   }
 
-  if (symbol && symbol.toUpperCase() !== (existing as { symbol: string }).symbol.toUpperCase()) {
-    const gate = await canCreateAlert(supabase, userData.user.id, symbol);
+  const existingRow = existing as { user_id: string; symbol: string; is_active: boolean };
+
+  // Any path that results in an active alert must pass the canCreateAlert gate:
+  //   (a) changing the symbol (even if still active),
+  //   (b) reactivating from inactive -> active (trial expiry, downgrade soft-disable).
+  // Without this, a user could bypass tier caps and trial expiry by sending
+  // update-alert with { id, is_active: true } on a previously-disabled alert.
+  const changingSymbol =
+    typeof symbol === "string" &&
+    symbol.toUpperCase() !== existingRow.symbol.toUpperCase();
+  const reactivating =
+    is_active === true && existingRow.is_active === false;
+
+  if (changingSymbol || reactivating) {
+    const gateSymbol = changingSymbol ? symbol : existingRow.symbol;
+    const gate = await canCreateAlert(supabase, userData.user.id, gateSymbol);
     if (!gate.allowed) {
       return new Response(JSON.stringify({ error: gate.reason, code: gate.code }), { status: 403, headers: cors });
     }

@@ -152,7 +152,27 @@ async function dispatchToChannels(
 
 // ─── Main Handler ───────────────────────────────────────────
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+    // Auth: require CRON_SECRET header. pg_cron must send this secret via
+    // `headers := jsonb_build_object('x-cron-secret', '<secret>')`; external
+    // callers without it get 401. verify_jwt=false in config.toml disables
+    // the platform JWT pre-check, so this header is the only gate.
+    const expectedSecret = Deno.env.get("CRON_SECRET");
+    if (!expectedSecret) {
+        console.error("evaluate-alerts: CRON_SECRET env var not set");
+        return new Response(JSON.stringify({ error: "server misconfigured" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+        });
+    }
+    const providedSecret = req.headers.get("x-cron-secret");
+    if (providedSecret !== expectedSecret) {
+        return new Response(JSON.stringify({ error: "unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+        });
+    }
+
     try {
         // 0. Expire alert trials: soft-disable alerts for free users whose
         //    3-day alert trial window has lapsed.

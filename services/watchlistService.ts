@@ -29,10 +29,14 @@ export interface WatchlistGroup {
 // ─── Load ───
 
 export async function loadWatchlists(userId: string): Promise<WatchlistGroup[]> {
+  // Only load active watchlists/assets. Soft-disabled rows (from plan
+  // downgrades via reconcileEntitlements) must not appear in the UI and
+  // must not count against cap math.
   const { data: lists, error: listsErr } = await supabase
     .from("watchlists")
     .select("*")
     .eq("user_id", userId)
+    .eq("is_active", true)
     .order("position", { ascending: true });
 
   if (listsErr) throw listsErr;
@@ -42,6 +46,7 @@ export async function loadWatchlists(userId: string): Promise<WatchlistGroup[]> 
     .from("watchlist_assets")
     .select("*")
     .in("watchlist_id", lists.map((l: WatchlistRow) => l.id))
+    .eq("is_active", true)
     .order("added_at", { ascending: true });
 
   if (assetsErr) throw assetsErr;

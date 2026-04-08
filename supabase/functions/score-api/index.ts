@@ -51,10 +51,21 @@ Deno.serve(async (req) => {
     return jsonResponse(401, { error: "Missing Authorization header" });
   }
 
+  // Two clients:
+  //   - `supabase`: anon + user JWT. Used for auth.getUser(), reads, and
+  //     the consume_score_lookup RPC (which needs auth.uid() to resolve).
+  //   - `admin`: pure service-role. Used ONLY for DB writes (cache refresh)
+  //     that would otherwise be blocked by the Phase 2 RLS lockdown which
+  //     revokes INSERT/UPDATE/DELETE on watchlist_assets from authenticated.
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
+    SUPABASE_URL,
     Deno.env.get("SUPABASE_ANON_KEY")!,
     { global: { headers: { Authorization: authHeader } } },
+  );
+  const admin = createClient(
+    SUPABASE_URL,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -177,13 +188,19 @@ Deno.serve(async (req) => {
           const nowIso = new Date().toISOString();
 
           // Scope update by symbol AND only watchlists owned by this user.
+          // Uses `admin` (service-role) because Phase 2 RLS lockdown revokes
+          // UPDATE on watchlist_assets from authenticated. Without this, the
+          // write silently fails and the 4h cache is effectively bypassed.
           const wlIds = [...activeWatchlistIds];
           if (wlIds.length > 0) {
-            await supabase
+            const { error: cacheErr } = await admin
               .from("watchlist_assets")
               .update({ cached_score: fresh.score, last_refreshed_at: nowIso })
               .eq("symbol", sym)
               .in("watchlist_id", wlIds);
+            if (cacheErr) {
+              console.error(`score-api cache refresh failed for ${sym}:`, cacheErr);
+            }
           }
 
           const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
@@ -208,11 +225,10 @@ Deno.serve(async (req) => {
         }
 
         // Atomic quota consumption for free users with a daily limit.
+        // The RPC derives uid via auth.uid() and cap via profiles.plan, so
+        // we pass no arguments — see 20260408120000_harden_consume_score_lookup.sql.
         if (!eff.isOwner && eff.entitlements.dailyScoreLookupLimit !== null) {
-          const { data: ok, error: rpcErr } = await supabase.rpc("consume_score_lookup", {
-            uid: user.id,
-            cap: eff.entitlements.dailyScoreLookupLimit,
-          });
+          const { data: ok, error: rpcErr } = await supabase.rpc("consume_score_lookup");
           if (rpcErr || ok === false) {
             errors[sym] = {
               code: "RATE_LIMITED",
