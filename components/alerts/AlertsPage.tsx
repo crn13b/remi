@@ -334,6 +334,8 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
     const isDark = theme === 'dark';
     const { data: ent } = useEntitlements();
     const entitlements = ent?.entitlements;
+    const distinctTickers = new Set(alerts.filter((a) => a.is_active).map((a) => a.symbol.toUpperCase()));
+    const atTickerCap = !!(entitlements && distinctTickers.size >= entitlements.maxAlertTickers);
 
     const [showForm, setShowForm] = useState(false);
     const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
@@ -534,7 +536,9 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                     <button
                         id="alert-new-btn"
                         onClick={() => handleOpenCreate()}
-                        className="relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors cursor-pointer"
+                        disabled={atTickerCap}
+                        title={atTickerCap ? 'Upgrade to add more tickers' : ''}
+                        className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors ${atTickerCap ? 'bg-slate-500 cursor-not-allowed opacity-60' : 'bg-blue-600 hover:bg-blue-500 cursor-pointer'}`}
                     >
                         <Plus size={16} />
                         New Alert
