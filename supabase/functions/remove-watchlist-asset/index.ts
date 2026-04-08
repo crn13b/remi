@@ -12,14 +12,15 @@ serve(async (req) => {
   const auth = req.headers.get("Authorization");
   if (!auth) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { global: { headers: { Authorization: auth } } },
-  );
-  const { data: userData } = await supabase.auth.getUser();
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const userClient = createClient(SUPABASE_URL, SERVICE_KEY, {
+    global: { headers: { Authorization: auth } },
+  });
+  const { data: userData } = await userClient.auth.getUser();
   if (!userData.user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
 
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   const body = await req.json();
   const watchlistId = body?.watchlist_id;
   const symbol = body?.symbol;
