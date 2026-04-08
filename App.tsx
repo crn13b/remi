@@ -223,25 +223,55 @@ const App: React.FC = () => {
     }, [userId]);
 
     // ─── Alert Handlers (Supabase-backed) ───
+    // Mutation errors (including tier-gate 402/403) are surfaced via window.alert
+    // and optimistic UI state is rolled back to the pre-mutation snapshot.
+    const reportMutationError = (action: string, err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`Failed to ${action}:`, err);
+        window.alert(`${action} failed: ${msg}`);
+    };
+
     const handleCreateAlert = async (data: Omit<Alert, 'id' | 'user_id' | 'last_triggered_at' | 'last_score' | 'created_at'>) => {
         if (!userId) return;
-        const newAlert = await alertService.createAlert(userId, data);
-        if (newAlert) setUserAlerts(prev => [newAlert, ...prev]);
+        try {
+            const newAlert = await alertService.createAlert(userId, data);
+            setUserAlerts(prev => [newAlert, ...prev]);
+        } catch (err) {
+            reportMutationError('create alert', err);
+        }
     };
 
     const handleUpdateAlert = async (updated: Alert) => {
-        setUserAlerts(prev => prev.map(a => a.id === updated.id ? updated : a));
-        await alertService.updateAlert(updated);
+        const prev = userAlerts;
+        setUserAlerts(prev.map(a => a.id === updated.id ? updated : a));
+        try {
+            await alertService.updateAlert(updated);
+        } catch (err) {
+            setUserAlerts(prev);
+            reportMutationError('update alert', err);
+        }
     };
 
     const handleToggleAlert = async (id: string, active: boolean) => {
-        setUserAlerts(prev => prev.map(a => a.id === id ? { ...a, is_active: active } : a));
-        await alertService.toggleAlert(id, active);
+        const prev = userAlerts;
+        setUserAlerts(prev.map(a => a.id === id ? { ...a, is_active: active } : a));
+        try {
+            await alertService.toggleAlert(id, active);
+        } catch (err) {
+            setUserAlerts(prev);
+            reportMutationError('toggle alert', err);
+        }
     };
 
     const handleDeleteAlert = async (id: string) => {
-        setUserAlerts(prev => prev.filter(a => a.id !== id));
-        await alertService.deleteAlert(id);
+        const prev = userAlerts;
+        setUserAlerts(prev.filter(a => a.id !== id));
+        try {
+            await alertService.deleteAlert(id);
+        } catch (err) {
+            setUserAlerts(prev);
+            reportMutationError('delete alert', err);
+        }
     };
 
     const handleMarkEventRead = async (id: string) => {
@@ -368,9 +398,10 @@ const App: React.FC = () => {
 
     const addAssetToWatchlist = (asset: Asset) => {
         if (!activeWatchlistId) return;
+        const listIdAtCall = activeWatchlistId;
 
         setWatchlists(prev => prev.map(wl =>
-            wl.id === activeWatchlistId
+            wl.id === listIdAtCall
                 ? { ...wl, assets: [...wl.assets, asset] }
                 : wl
         ));
@@ -378,8 +409,15 @@ const App: React.FC = () => {
         setLoadingSymbols(prev => new Set(prev).add(asset.symbol));
         setTimeout(() => setRecentlyAddedSymbol(null), 600);
 
-        // Persist to Supabase
-        watchlistService.addAsset(activeWatchlistId, asset.symbol, asset.name).catch(console.error);
+        // Persist to Supabase. On failure, roll back the optimistic insert and surface the error.
+        watchlistService.addAsset(listIdAtCall, asset.symbol, asset.name).catch((err) => {
+            setWatchlists(prev => prev.map(wl =>
+                wl.id === listIdAtCall
+                    ? { ...wl, assets: wl.assets.filter(a => a.symbol !== asset.symbol) }
+                    : wl
+            ));
+            reportMutationError('add asset to watchlist', err);
+        });
 
         // Fetch live score if not already set
         if (!asset.score && isSupported(asset.symbol)) {
@@ -422,33 +460,46 @@ const App: React.FC = () => {
     };
 
     const removeAssetFromWatchlist = (symbol: string) => {
+        if (!activeWatchlistId) return;
+        const listIdAtCall = activeWatchlistId;
+        const snapshot = watchlists;
         setWatchlists(prev => prev.map(wl =>
-            wl.id === activeWatchlistId
+            wl.id === listIdAtCall
                 ? { ...wl, assets: wl.assets.filter(a => a.symbol !== symbol) }
                 : wl
         ));
-        if (activeWatchlistId) {
-            watchlistService.removeAsset(activeWatchlistId, symbol).catch(console.error);
-        }
+        watchlistService.removeAsset(listIdAtCall, symbol).catch((err) => {
+            setWatchlists(snapshot);
+            reportMutationError('remove asset from watchlist', err);
+        });
     };
 
     const createNewWatchlist = async () => {
         if (!userId) return;
         const position = watchlists.length;
-        const id = await watchlistService.createWatchlist(userId, 'Untitled', position);
-        setWatchlists(prev => [...prev, { id, name: '', assets: [] }]);
-        setActiveWatchlistId(id);
-        setEditingTabId(id);
-        setEditingTabName('');
+        try {
+            const id = await watchlistService.createWatchlist(userId, 'Untitled', position);
+            setWatchlists(prev => [...prev, { id, name: '', assets: [] }]);
+            setActiveWatchlistId(id);
+            setEditingTabId(id);
+            setEditingTabName('');
+        } catch (err) {
+            reportMutationError('create watchlist', err);
+        }
     };
 
     const finishEditingTab = () => {
         if (editingTabId) {
             const name = editingTabName.trim() || 'Untitled';
+            const targetId = editingTabId;
+            const snapshot = watchlists;
             setWatchlists(prev => prev.map(wl =>
-                wl.id === editingTabId ? { ...wl, name } : wl
+                wl.id === targetId ? { ...wl, name } : wl
             ));
-            watchlistService.renameWatchlist(editingTabId, name).catch(console.error);
+            watchlistService.renameWatchlist(targetId, name).catch((err) => {
+                setWatchlists(snapshot);
+                reportMutationError('rename watchlist', err);
+            });
             setEditingTabId(null);
             setEditingTabName('');
         }
@@ -456,9 +507,15 @@ const App: React.FC = () => {
 
     const deleteWatchlist = (id: string) => {
         if (watchlists.length <= 1) return;
+        const snapshot = watchlists;
+        const prevActive = activeWatchlistId;
         setWatchlists(prev => prev.filter(wl => wl.id !== id));
         if (activeWatchlistId === id) setActiveWatchlistId(watchlists[0].id);
-        watchlistService.deleteWatchlist(id).catch(console.error);
+        watchlistService.deleteWatchlist(id).catch((err) => {
+            setWatchlists(snapshot);
+            setActiveWatchlistId(prevActive);
+            reportMutationError('delete watchlist', err);
+        });
     };
 
     // Search State

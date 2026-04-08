@@ -44,45 +44,30 @@ export async function loadAlerts(userId: string): Promise<Alert[]> {
 }
 
 // Signature preserved for App.tsx call sites. `userId` is ignored here —
-// the edge function derives it from the JWT.
-export async function createAlert(_userId: string, input: CreateAlertInput): Promise<Alert | null> {
-    try {
-        const res = await invoke<{ alert: Alert }>('create-alert', input);
-        return res.alert ?? (res as unknown as Alert);
-    } catch (err) {
-        console.error('Failed to create alert:', err);
-        return null;
-    }
+// the edge function derives it from the JWT. Errors (including tier-gate
+// 402/403 rejections) are re-thrown so callers can surface them to the user
+// and roll back any optimistic UI state.
+export async function createAlert(_userId: string, input: CreateAlertInput): Promise<Alert> {
+    const res = await invoke<{ alert: Alert }>('create-alert', input);
+    return res.alert ?? (res as unknown as Alert);
 }
 
 export async function updateAlert(alert: Alert): Promise<void> {
-    try {
-        await invoke('update-alert', {
-            id: alert.id,
-            symbol: alert.symbol,
-            direction: alert.direction,
-            aggressiveness: alert.aggressiveness,
-            is_active: alert.is_active,
-        });
-    } catch (err) {
-        console.error('Failed to update alert:', err);
-    }
+    await invoke('update-alert', {
+        id: alert.id,
+        symbol: alert.symbol,
+        direction: alert.direction,
+        aggressiveness: alert.aggressiveness,
+        is_active: alert.is_active,
+    });
 }
 
 export async function toggleAlert(id: string, isActive: boolean): Promise<void> {
-    try {
-        await invoke('toggle-alert', { id, is_active: isActive });
-    } catch (err) {
-        console.error('Failed to toggle alert:', err);
-    }
+    await invoke('toggle-alert', { id, is_active: isActive });
 }
 
 export async function deleteAlert(id: string): Promise<void> {
-    try {
-        await invoke('delete-alert', { id });
-    } catch (err) {
-        console.error('Failed to delete alert:', err);
-    }
+    await invoke('delete-alert', { id });
 }
 
 // ─── Alert Events CRUD ──────────────────────────────────────────
