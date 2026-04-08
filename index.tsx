@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { requireAuth } from './services/authGuard';
+import { EntitlementsProvider } from './contexts/EntitlementsContext';
 
 async function init() {
     const isAuthed = await requireAuth();
@@ -14,7 +15,9 @@ async function init() {
     const root = ReactDOM.createRoot(rootElement);
     root.render(
         <React.StrictMode>
-            <App />
+            <EntitlementsProvider>
+                <App />
+            </EntitlementsProvider>
         </React.StrictMode>
     );
 }
