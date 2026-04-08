@@ -42,58 +42,64 @@ export async function loadAlerts(userId: string): Promise<Alert[]> {
     return data ?? [];
 }
 
-export async function createAlert(userId: string, input: CreateAlertInput): Promise<Alert | null> {
-    const { data, error } = await supabase
-        .from('alerts')
-        .insert({
-            user_id: userId,
-            symbol: input.symbol,
-            direction: input.direction,
-            aggressiveness: input.aggressiveness,
-            is_active: input.is_active,
-        })
-        .select()
-        .single();
+async function invoke<T>(name: string, body: unknown): Promise<T> {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('not authenticated');
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    return res.json() as Promise<T>;
+}
 
-    if (error) {
-        console.error('Failed to create alert:', error);
+// Signature preserved for App.tsx call sites. `userId` is ignored here —
+// the edge function derives it from the JWT.
+export async function createAlert(_userId: string, input: CreateAlertInput): Promise<Alert | null> {
+    try {
+        const res = await invoke<{ alert: Alert }>('create-alert', input);
+        return res.alert ?? (res as unknown as Alert);
+    } catch (err) {
+        console.error('Failed to create alert:', err);
         return null;
     }
-    return data;
 }
 
 export async function updateAlert(alert: Alert): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .update({
+    try {
+        await invoke('update-alert', {
+            id: alert.id,
             symbol: alert.symbol,
             direction: alert.direction,
             aggressiveness: alert.aggressiveness,
             is_active: alert.is_active,
-            last_score: alert.last_score,
-            last_triggered_at: alert.last_triggered_at,
-        })
-        .eq('id', alert.id);
-
-    if (error) console.error('Failed to update alert:', error);
+        });
+    } catch (err) {
+        console.error('Failed to update alert:', err);
+    }
 }
 
 export async function toggleAlert(id: string, isActive: boolean): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .update({ is_active: isActive })
-        .eq('id', id);
-
-    if (error) console.error('Failed to toggle alert:', error);
+    try {
+        await invoke('toggle-alert', { id, is_active: isActive });
+    } catch (err) {
+        console.error('Failed to toggle alert:', err);
+    }
 }
 
 export async function deleteAlert(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .delete()
-        .eq('id', id);
-
-    if (error) console.error('Failed to delete alert:', error);
+    try {
+        await invoke('delete-alert', { id });
+    } catch (err) {
+        console.error('Failed to delete alert:', err);
+    }
 }
 
 // ─── Alert Events CRUD ──────────────────────────────────────────
