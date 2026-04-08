@@ -119,18 +119,7 @@ export async function addAsset(watchlistId: string, symbol: string, name: string
 }
 
 // ─── Remove asset from watchlist ───
-// Edge function takes the asset id, but App.tsx call sites pass (watchlistId, symbol).
-// We resolve the asset id via a SELECT first, then invoke the edge function.
 
 export async function removeAsset(watchlistId: string, symbol: string): Promise<void> {
-  const { data, error } = await supabase
-    .from("watchlist_assets")
-    .select("id")
-    .eq("watchlist_id", watchlistId)
-    .eq("symbol", symbol)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return;
-  await invoke("remove-watchlist-asset", { id: (data as { id: string }).id });
+  await invoke("remove-watchlist-asset", { watchlist_id: watchlistId, symbol });
 }

@@ -123,14 +123,17 @@ const App: React.FC = () => {
     const [userEmail, setUserEmail] = useState<string>('');
     const [userMeta, setUserMeta] = useState<{ first_name?: string; last_name?: string; trades?: string } | null>(null);
 
+    const [alertTrialStartedAt, setAlertTrialStartedAt] = useState<string | null>(null);
+
     const fetchProfile = async (uid: string) => {
         const { data } = await supabase
             .from("profiles")
-            .select("plan")
+            .select("plan, alert_trial_started_at")
             .eq("id", uid)
             .maybeSingle();
         const plan = data?.plan ?? 'free';
         setUserPlan(plan);
+        setAlertTrialStartedAt((data as { alert_trial_started_at?: string | null } | null)?.alert_trial_started_at ?? null);
     };
 
     const loadUserAlerts = async (uid: string) => {
@@ -396,8 +399,18 @@ const App: React.FC = () => {
         ).slice(0, 5)
         : [];
 
+    const maxWatchlists = ent?.entitlements.maxWatchlists ?? Number.POSITIVE_INFINITY;
+    const maxTickersPerWatchlist = ent?.entitlements.maxTickersPerWatchlist ?? Number.POSITIVE_INFINITY;
+    const atWatchlistCap = watchlists.length >= maxWatchlists;
+    const activeWatchlistAssetCount = watchlists.find(w => w.id === activeWatchlistId)?.assets.length ?? 0;
+    const atTickerPerListCap = activeWatchlistAssetCount >= maxTickersPerWatchlist;
+
     const addAssetToWatchlist = (asset: Asset) => {
         if (!activeWatchlistId) return;
+        if (atTickerPerListCap) {
+            window.alert(`This watchlist is at its ${maxTickersPerWatchlist}-ticker limit. Upgrade to add more.`);
+            return;
+        }
         const listIdAtCall = activeWatchlistId;
 
         setWatchlists(prev => prev.map(wl =>
@@ -476,6 +489,10 @@ const App: React.FC = () => {
 
     const createNewWatchlist = async () => {
         if (!userId) return;
+        if (atWatchlistCap) {
+            window.alert(`You've reached your ${maxWatchlists}-watchlist limit. Upgrade for more.`);
+            return;
+        }
         const position = watchlists.length;
         try {
             const id = await watchlistService.createWatchlist(userId, 'Untitled', position);
@@ -1520,7 +1537,9 @@ const App: React.FC = () => {
                                                 <div className={`mt-2 pt-2 border-t ${theme === "light" ? "border-slate-100" : "border-white/5"}`}>
                                                     <button
                                                         onClick={createNewWatchlist}
-                                                        className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-300 border border-dashed ${theme === "light"
+                                                        disabled={atWatchlistCap}
+                                                        title={atWatchlistCap ? `Upgrade to create more than ${maxWatchlists} watchlists` : ''}
+                                                        className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-300 border border-dashed ${atWatchlistCap ? 'opacity-50 cursor-not-allowed' : ''} ${theme === "light"
                                                             ? "text-slate-500 border-slate-300 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50"
                                                             : "text-gray-400 border-white/20 hover:text-blue-400 hover:border-blue-500/50 hover:bg-blue-500/10"
                                                             }`}
@@ -1985,6 +2004,7 @@ const App: React.FC = () => {
                                 userConnections={userConnections}
                                 onConnectionComplete={handleConnectionComplete}
                                 userId={userId}
+                                trialStartedAt={alertTrialStartedAt}
                             />
                         )}
                         {/* ── Owner Dashboard (engine inspector) ── */}

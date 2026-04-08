@@ -21,19 +21,27 @@ serve(async (req) => {
   if (!userData.user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
 
   const body = await req.json();
-  const id = body?.id;
-  if (!id) return new Response(JSON.stringify({ error: "missing id" }), { status: 400, headers: cors });
+  const watchlistId = body?.watchlist_id;
+  const symbol = body?.symbol;
+  if (!watchlistId || !symbol) {
+    return new Response(JSON.stringify({ error: "missing watchlist_id or symbol" }), { status: 400, headers: cors });
+  }
 
-  const { data: asset } = await supabase
-    .from("watchlist_assets")
-    .select("id, watchlists!inner(user_id)")
-    .eq("id", id)
+  // Verify the watchlist belongs to the user
+  const { data: wl } = await supabase
+    .from("watchlists")
+    .select("id, user_id")
+    .eq("id", watchlistId)
     .single();
-  if (!asset || (asset as unknown as { watchlists: { user_id: string } }).watchlists.user_id !== userData.user.id) {
+  if (!wl || (wl as { user_id: string }).user_id !== userData.user.id) {
     return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: cors });
   }
 
-  const { error } = await supabase.from("watchlist_assets").delete().eq("id", id);
+  const { error } = await supabase
+    .from("watchlist_assets")
+    .delete()
+    .eq("watchlist_id", watchlistId)
+    .eq("symbol", symbol);
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
 });
