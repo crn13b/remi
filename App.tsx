@@ -114,9 +114,12 @@ const App: React.FC = () => {
     // ─── Auth State ───
     const [userId, setUserId] = useState<string | null>(null);
     // Per spec, UI must never read `ent.plan` directly — use dedicated flags.
-    const { data: ent } = useEntitlements();
+    const { data: ent, refresh: refreshEntitlements } = useEntitlements();
     const isFoundingMember = ent?.entitlements.foundingMemberBadge === true;
     const isOwner = ent?.isOwner === true;
+    const dailyLookupsRemaining = ent?.dailyScoreLookupsRemaining ?? null;
+    const dailyLookupLimit = ent?.entitlements.dailyScoreLookupLimit ?? null;
+    const lookupsExhausted = dailyLookupLimit !== null && dailyLookupsRemaining === 0;
     const [userPlan, setUserPlan] = useState<string>('free');
     const [userEmail, setUserEmail] = useState<string>('');
     const [userMeta, setUserMeta] = useState<{ first_name?: string; last_name?: string; trades?: string } | null>(null);
@@ -474,6 +477,12 @@ const App: React.FC = () => {
     const searchInputRef = useRef<HTMLInputElement>(null);
     const geckoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [searchStatus, setSearchStatus] = React.useState<"idle" | "analyzing" | "complete">("idle"); // Kept for compatibility with existing render logic, but controlled by remiScanState effectively
+    // Refresh entitlements (daily lookups remaining) after a score lookup completes
+    useEffect(() => {
+        if (searchStatus === "complete") {
+            refreshEntitlements().catch(() => {});
+        }
+    }, [searchStatus]);
     const [searchStep, setSearchStep] = useState(0);
     const [isFilling, setIsFilling] = useState(false);
     const [searchResult, setSearchResult] = useState<Asset | null>(null);
@@ -1053,12 +1062,21 @@ const App: React.FC = () => {
                                                             />
                                                             <button
                                                                 onClick={() => handleSmartSearch()}
-                                                                disabled={!searchQuery.trim()}
-                                                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${searchQuery.trim() ? "bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-lg hover:shadow-blue-500/25 hover:scale-105" : "bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed"}`}
+                                                                disabled={!searchQuery.trim() || lookupsExhausted}
+                                                                title={lookupsExhausted ? "Daily lookup limit reached — upgrade for more" : ""}
+                                                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${searchQuery.trim() && !lookupsExhausted ? "bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-lg hover:shadow-blue-500/25 hover:scale-105" : "bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed"}`}
                                                             >
                                                                 <ArrowUp size={24} strokeWidth={2.5} />
                                                             </button>
                                                         </div>
+                                                        {dailyLookupLimit !== null && dailyLookupsRemaining !== null && (
+                                                            <div className={`text-[10px] mt-2 text-center ${theme === "light" ? "text-slate-500" : "text-gray-400"}`}>
+                                                                Daily lookups remaining: {dailyLookupsRemaining}/{dailyLookupLimit}
+                                                                {lookupsExhausted && (
+                                                                    <> · <a href="/pricing.html?reason=daily-lookup-cap" className="underline">Upgrade</a></>
+                                                                )}
+                                                            </div>
+                                                        )}
 
                                                         {/* Autocomplete Dropdown */}
                                                         {showSuggestions && (suggestionsLoading || searchSuggestions.length > 0) && (
