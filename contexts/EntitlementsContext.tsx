@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import type { EffectiveEntitlements } from "../types/entitlements";
 import { fetchMe } from "../services/meService";
 import { supabase } from "../services/supabaseClient";
@@ -19,7 +19,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   const [data, setData] = useState<EffectiveEntitlements | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const eff = await fetchMe();
@@ -29,7 +29,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -38,10 +38,15 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       else setData(null);
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [refresh]);
+
+  const value = useMemo<ContextValue>(
+    () => ({ data, loading, refresh }),
+    [data, loading, refresh],
+  );
 
   return (
-    <EntitlementsContext.Provider value={{ data, loading, refresh }}>
+    <EntitlementsContext.Provider value={value}>
       {children}
     </EntitlementsContext.Provider>
   );
