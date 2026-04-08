@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabaseClient';
+import { invoke } from './_invoke';
 import type { Alert, AlertEvent, AlertDirection, UrgencyLevel, AlertEventType, NotificationPreferences, Aggressiveness, NudgeFrequency, UserConnection } from '../components/alerts/types';
 import { LONG_THRESHOLDS, SHORT_THRESHOLDS, NUDGE_INTERVAL_MS, generateNudgeMessage } from '../components/alerts/constants';
 import type { RemiScoreResult } from './remiScore';
@@ -40,24 +41,6 @@ export async function loadAlerts(userId: string): Promise<Alert[]> {
         return [];
     }
     return data ?? [];
-}
-
-async function invoke<T>(name: string, body: unknown): Promise<T> {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('not authenticated');
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error ?? `HTTP ${res.status}`);
-    }
-    return res.json() as Promise<T>;
 }
 
 // Signature preserved for App.tsx call sites. `userId` is ignored here —
