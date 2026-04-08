@@ -35,11 +35,11 @@ import RemiScoreCard from "./components/dashboard/RemiScoreCard";
 import FoundingBadge from "./components/dashboard/FoundingBadge";
 import OwnerBadge from "./components/dashboard/OwnerBadge";
 import AlertsPage from "./components/alerts/AlertsPage";
-import { FounderDashboard } from "./components/founder/FounderDashboard";
 import { Alert, AlertEvent, Aggressiveness, NudgeFrequency, NotificationPreferences, UserConnection } from "./components/alerts/types";
 import * as alertService from "./services/alertService";
 import { searchCatalog, searchGeckoTerminal, searchBinance, type CatalogEntry } from "./data/assetCatalog";
 import { EntitlementsProvider } from "./contexts/EntitlementsContext";
+import { useEntitlements } from "./hooks/useEntitlements";
 
 // ─── Watchlist Types ───
 import type { WatchlistGroup } from "./services/watchlistService";
@@ -112,7 +112,10 @@ const App: React.FC = () => {
 
     // ─── Auth State ───
     const [userId, setUserId] = useState<string | null>(null);
-    const [isFounder, setIsFounder] = useState(false);
+    // Per spec, UI must never read `ent.plan` directly — use dedicated flags.
+    const { data: ent } = useEntitlements();
+    const isFoundingMember = ent?.entitlements.foundingMemberBadge === true;
+    const isOwner = ent?.isOwner === true;
     const [userPlan, setUserPlan] = useState<string>('free');
     const [userEmail, setUserEmail] = useState<string>('');
     const [userMeta, setUserMeta] = useState<{ first_name?: string; last_name?: string; trades?: string } | null>(null);
@@ -125,7 +128,6 @@ const App: React.FC = () => {
             .maybeSingle();
         const plan = data?.plan ?? 'free';
         setUserPlan(plan);
-        setIsFounder(plan === "founder");
     };
 
     const loadUserAlerts = async (uid: string) => {
@@ -726,12 +728,19 @@ const App: React.FC = () => {
                     />
                 </div>
 
-                {isFounder && (
+                {(isOwner || isFoundingMember) && (
                     <div className={`w-full flex flex-col items-center gap-1.5 transition-all duration-300 ${isSidebarExpanded ? "px-4" : "px-1"}`}>
-                        {isSidebarExpanded
-                            ? <><OwnerBadge variant="pill" theme={theme} /><FoundingBadge variant="pill" theme={theme} /></>
-                            : <><OwnerBadge variant="icon" theme={theme} /><FoundingBadge variant="icon" theme={theme} /></>
-                        }
+                        {isSidebarExpanded ? (
+                            <>
+                                {isOwner && <OwnerBadge variant="pill" theme={theme} />}
+                                {isFoundingMember && <FoundingBadge variant="pill" theme={theme} />}
+                            </>
+                        ) : (
+                            <>
+                                {isOwner && <OwnerBadge variant="icon" theme={theme} />}
+                                {isFoundingMember && <FoundingBadge variant="icon" theme={theme} />}
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -740,7 +749,7 @@ const App: React.FC = () => {
                         { id: ViewType.SEARCH, icon: Search, label: "REMi Score" },
                         { id: ViewType.WATCHLIST, icon: List, label: "Watchlist" },
                         { id: ViewType.ALERTS, icon: Bell, label: "Alerts" },
-                        ...(isFounder ? [{ id: ViewType.FOUNDER, icon: Terminal, label: "Engine" }] : []),
+                        ...(isOwner ? [{ id: ViewType.OWNER, icon: Terminal, label: "Engine" }] : []),
                     ].map((item) => (
                         <div
                             key={item.id}
@@ -861,7 +870,7 @@ const App: React.FC = () => {
                                 { id: ViewType.SEARCH, icon: Search, label: "REMi Score" },
                                 { id: ViewType.WATCHLIST, icon: List, label: "Watchlist" },
                                 { id: ViewType.ALERTS, icon: Bell, label: "Alerts" },
-                                ...(isFounder ? [{ id: ViewType.FOUNDER, icon: Terminal, label: "Engine" }] : []),
+                                ...(isOwner ? [{ id: ViewType.OWNER, icon: Terminal, label: "Engine" }] : []),
                             ].map((item) => (
                                 <button
                                     key={item.id}
@@ -895,9 +904,9 @@ const App: React.FC = () => {
                         <div
                             className={`p-6 border-t ${theme === "light" ? "border-slate-200" : "border-[#27273a]"} flex flex-col items-center gap-4`}
                         >
-                            {isFounder && <>
-                                <OwnerBadge variant="pill" theme={theme} />
-                                <FoundingBadge variant="pill" theme={theme} />
+                            {(isOwner || isFoundingMember) && <>
+                                {isOwner && <OwnerBadge variant="pill" theme={theme} />}
+                                {isFoundingMember && <FoundingBadge variant="pill" theme={theme} />}
                             </>}
                             <button
                                 onClick={() => { setCurrentView(ViewType.PROFILE); setIsMobileMenuOpen(false); }}
@@ -1292,7 +1301,7 @@ const App: React.FC = () => {
                                             score={liveScore}
                                             asset={searchResult}
                                             theme={theme}
-                                            isFounder={isFounder}
+                                            isFoundingMember={isFoundingMember}
                                             failed={scoreFailed}
                                             onReset={cancelAnalysis}
                                         />
@@ -1892,9 +1901,9 @@ const App: React.FC = () => {
                                 userId={userId}
                             />
                         )}
-                        {/* ── Founder Dashboard ── */}
-                        {currentView === ViewType.FOUNDER && isFounder && (
-                            <FounderDashboard theme={theme} />
+                        {/* ── Owner Dashboard (engine inspector) ── */}
+                        {currentView === ViewType.OWNER && isOwner && (
+                            <div className="p-8 text-sm opacity-60">Owner dashboard unavailable in public build.</div>
                         )}
                         {/* ── Profile View ── */}
                         {currentView === ViewType.PROFILE && (
@@ -1921,9 +1930,9 @@ const App: React.FC = () => {
                                                 </p>
                                                 <p className={`text-sm ${theme === "light" ? "text-slate-500" : "text-gray-400"}`}>{userEmail}</p>
                                             </div>
-                                            {isFounder && <div className="flex flex-col gap-1.5">
-                                                <OwnerBadge variant="pill" theme={theme} />
-                                                <FoundingBadge variant="pill" theme={theme} />
+                                            {(isOwner || isFoundingMember) && <div className="flex flex-col gap-1.5">
+                                                {isOwner && <OwnerBadge variant="pill" theme={theme} />}
+                                                {isFoundingMember && <FoundingBadge variant="pill" theme={theme} />}
                                             </div>}
                                         </div>
                                         <div className={`grid grid-cols-2 gap-4 pt-4 border-t ${theme === "light" ? "border-slate-100" : "border-[#27273a]"}`}>

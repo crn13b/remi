@@ -6,7 +6,7 @@ interface RemiScoreCardProps {
     score: number;
     asset: Asset;
     theme: "dark" | "light";
-    isFounder?: boolean;
+    isFoundingMember?: boolean;
     failed?: boolean;
     onReset?: () => void;
 }
@@ -111,7 +111,7 @@ const RemiScoreCard: React.FC<RemiScoreCardProps> = ({
     score,
     asset,
     theme,
-    isFounder = false,
+    isFoundingMember = false,
     failed = false,
     onReset,
 }) => {
@@ -388,7 +388,7 @@ const RemiScoreCard: React.FC<RemiScoreCardProps> = ({
                             </>
                         )}
 
-                        {isFounder && (
+                        {isFoundingMember && (
                             <div className="flex justify-center z-10 mt-1">
                                 <FoundingBadge variant="pill" theme={theme} />
                             </div>
@@ -592,7 +592,7 @@ const RemiScoreCard: React.FC<RemiScoreCardProps> = ({
 
                         {/* FOOTER */}
                         <div className="w-full mt-6 pt-4 flex flex-col items-center justify-center gap-2 border-t border-white/5 relative z-10">
-                            {isFounder && (
+                            {isFoundingMember && (
                                 <FoundingBadge variant="pill" theme={theme} />
                             )}
                             <p
