@@ -173,15 +173,21 @@ const App: React.FC = () => {
                 setUserMeta(session.user.user_metadata ?? null);
             }
         });
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                const uid = session.user.id;
-                setUserId(uid);
-                fetchProfile(uid);
-                loadUserAlerts(uid);
-                setUserEmail(session.user.email ?? '');
-                setUserMeta(session.user.user_metadata ?? null);
+        // Use getUser() instead of getSession() on initial load: getSession()
+        // only reads localStorage and trusts a cached JWT, so a deleted/revoked
+        // user with a stale token still appears logged-in. getUser() round-trips
+        // to the auth server and returns null for invalidated tokens.
+        supabase.auth.getUser().then(({ data: { user }, error }) => {
+            if (error || !user) {
+                supabase.auth.signOut().catch(() => {});
+                window.location.href = '/index.html';
+                return;
             }
+            setUserId(user.id);
+            fetchProfile(user.id);
+            loadUserAlerts(user.id);
+            setUserEmail(user.email ?? '');
+            setUserMeta(user.user_metadata ?? null);
         });
         return () => subscription.unsubscribe();
     }, []);
@@ -674,6 +680,10 @@ const App: React.FC = () => {
 
         setShowSuggestions(false);
         setSearchSuggestions([]);
+        // Kick off the score fetch here (the user action), NOT in an effect —
+        // React.StrictMode double-invokes effects in dev, which caused every
+        // scan to consume 2 daily lookups instead of 1.
+        pendingScore.current = getRemiScore(symbol.toUpperCase());
         setSearchStatus("analyzing");
 
         // Delay unmounting the DOM node by 500ms so CSS exit animations can physically render
@@ -705,14 +715,6 @@ const App: React.FC = () => {
 
     // Step durations (ms) — intentionally irregular to feel like real async work
     const STEP_DURATIONS = [3500, 2800, 1500, 3400, 3100, 1700, 1300];
-
-    // Start fetching live score as soon as analysis begins (runs during animation)
-    useEffect(() => {
-        if (searchStatus === "analyzing") {
-            const querySymbol = searchQuery.trim().toUpperCase() || "BTC";
-            pendingScore.current = getRemiScore(querySymbol);
-        }
-    }, [searchStatus]);
 
     useEffect(() => {
         if (searchStatus === "analyzing") {
