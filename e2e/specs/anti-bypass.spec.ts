@@ -33,13 +33,13 @@ test.describe("Anti-bypass: direct API calls", () => {
       await fetch(`${supabaseUrl}/functions/v1/score-api`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols: [{ symbol: `TEST${i}` }] }),
+        body: JSON.stringify({ symbols: [`TEST${i}`] }),
       });
     }
     const res = await fetch(`${supabaseUrl}/functions/v1/score-api`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ symbols: [{ symbol: "BYPASS" }], source: "watchlist" }),
+      body: JSON.stringify({ symbols: ["BYPASS"], source: "watchlist" }),
     });
     const json = await res.json();
     expect(JSON.stringify(json)).toMatch(/limit|reached|quota/i);
@@ -137,7 +137,7 @@ test.describe("Anti-bypass: owner on free plan", () => {
       const res = await fetch(`${supabaseUrl}/functions/v1/score-api`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols: [{ symbol: `OWNER${i}` }] }),
+        body: JSON.stringify({ symbols: [`OWNER${i}`] }),
       });
       expect(res.ok).toBe(true);
     }
