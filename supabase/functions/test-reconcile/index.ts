@@ -44,6 +44,15 @@ Deno.serve(async (req) => {
   );
 
   try {
+    // Mirror stripe-webhook: update the plan column BEFORE reconciling,
+    // so downstream gating checks (create-alert, toggle-alert) read the
+    // new plan from the profile row.
+    const { error: planErr } = await supabase
+      .from("profiles")
+      .update({ plan: targetPlan })
+      .eq("id", userId);
+    if (planErr) throw new Error(`failed to update plan: ${planErr.message}`);
+
     const result = await reconcileEntitlements(supabase, userId, targetPlan);
     return new Response(
       JSON.stringify({ ok: true, result }),
