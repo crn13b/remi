@@ -93,7 +93,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // Fetch the subscription to get the price ID
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     const priceId = subscription.items.data[0]?.price.id;
-    const plan = PRICE_TO_PLAN[priceId] ?? "core";
+    const plan = PRICE_TO_PLAN[priceId];
+    if (!plan) {
+        console.error(`UNMAPPED PRICE ID: ${priceId} — skipping plan update for customer ${customerId}`);
+        return;
+    }
 
     // Find user by customer ID or by client_reference_id (set this to the user's Supabase ID
     // when creating the Stripe checkout session from your frontend)
@@ -129,8 +133,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const priceId = subscription.items.data[0]?.price.id;
-    const plan = PRICE_TO_PLAN[priceId] ?? "core";
+    const plan = PRICE_TO_PLAN[priceId];
     const isActive = subscription.status === "active" || subscription.status === "trialing";
+
+    if (!plan && isActive) {
+        console.error(`UNMAPPED PRICE ID: ${priceId} — skipping plan update for subscription ${subscription.id}`);
+        return;
+    }
 
     const { data } = await supabase
         .from("profiles")
@@ -143,7 +152,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         return;
     }
 
-    const newPlan = isActive ? plan : "free";
+    const newPlan = isActive ? plan! : "free";
     await supabase.from("profiles").update({
         plan: newPlan,
         subscription_period_end: new Date(subscription.current_period_end * 1000).toISOString(),

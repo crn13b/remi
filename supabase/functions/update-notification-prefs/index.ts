@@ -14,15 +14,22 @@ serve(async (req) => {
   if (!auth) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const userClient = createClient(SUPABASE_URL, SERVICE_KEY, {
+  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: auth } },
   });
   const { data: userData } = await userClient.auth.getUser();
   if (!userData.user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: cors });
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-  const body = await req.json();
+  // deno-lint-ignore no-explicit-any
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+  }
   const {
     email_enabled,
     discord_enabled,
