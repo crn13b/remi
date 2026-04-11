@@ -47,10 +47,9 @@ interface ScoreApiResponse {
   errors?: Record<string, ScoreApiError>;
 }
 
-// ─── Cache ───────────────────────────────────────────────────────
-
-const cache = new Map<string, { result: RemiScoreResult; ts: number }>();
-const CACHE_TTL = 55 * 1000;
+// ─── Cache removed ──────────────────────────────────────────────
+// Client-side score cache was removed to prevent cross-namespace poisoning.
+// Server enforces freshness via watchlist_assets.last_refreshed_at.
 
 // ─── Display Names ──────────────────────────────────────────────
 
@@ -97,17 +96,10 @@ async function fetchScoresFromApi(symbols: string[]): Promise<ScoreApiResponse> 
 export async function getRemiScore(symbol: string): Promise<RemiScoreResult> {
   const sym = symbol.toUpperCase();
 
-  // Check cache
-  const cached = cache.get(sym);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return cached.result;
-  }
-
   const response = await fetchScoresFromApi([sym]);
 
   const symError = response.errors?.[sym];
   if (symError) {
-    // Only cache as unsupported for permanent failures, not transient ones
     if (symError.code === "invalid_symbol") validatedSymbols.set(sym, false);
     throw new Error(symError.message);
   }
@@ -118,7 +110,6 @@ export async function getRemiScore(symbol: string): Promise<RemiScoreResult> {
   }
 
   validatedSymbols.set(sym, true);
-  cache.set(sym, { result, ts: Date.now() });
   return result;
 }
 
@@ -130,29 +121,14 @@ export async function getBatchScores(
   onResult?: (symbol: string, result: RemiScoreResult) => void,
 ): Promise<Map<string, RemiScoreResult>> {
   const results = new Map<string, RemiScoreResult>();
-  const uncached: string[] = [];
+  const upper = symbols.map((s) => s.toUpperCase());
+  if (upper.length === 0) return results;
 
-  // Return cached results immediately
-  for (const symbol of symbols) {
-    const sym = symbol.toUpperCase();
-    const cached = cache.get(sym);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      results.set(sym, cached.result);
-      onResult?.(sym, cached.result);
-    } else {
-      uncached.push(sym);
-    }
-  }
+  const response = await fetchScoresFromApi(upper);
 
-  if (uncached.length === 0) return results;
-
-  // Fetch remaining from API in one batch call
-  const response = await fetchScoresFromApi(uncached);
-
-  for (const sym of uncached) {
+  for (const sym of upper) {
     const result = response.results[sym];
     if (result) {
-      cache.set(sym, { result, ts: Date.now() });
       results.set(sym, result);
       validatedSymbols.set(sym, true);
       onResult?.(sym, result);

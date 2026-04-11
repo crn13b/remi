@@ -3,7 +3,7 @@ export enum ViewType {
     ALERTS = 'alerts',
     SEARCH = 'search',
     PROFILE = 'profile',
-    FOUNDER = 'founder'
+    OWNER = 'owner'
 }
 
 export interface Asset {

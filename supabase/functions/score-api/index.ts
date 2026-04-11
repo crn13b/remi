@@ -3,7 +3,9 @@
  * score-api — Authenticated score endpoint
  *
  * Accepts: POST { symbols: string[] }
- * Returns: { results: Record<string, RemiScoreResult>, errors: Record<string, { code, message }> }
+ * Returns: { results: Record<string, ScoreResult>, errors: Record<string, { code, message }> }
+ *
+ * Server determines source (watchlist vs lookup) — client-supplied source is ignored.
  *
  * Auth: Requires valid Supabase JWT in Authorization header.
  * Deploy: supabase functions deploy score-api
@@ -12,6 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRemiScore } from "../_shared/remi-score/engine.ts";
 import type { RemiScoreResult } from "../_shared/remi-score/engine.ts";
+import { canLookupScore, getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
 
 const MAX_BATCH_SIZE = 30;
 
@@ -19,6 +22,11 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+};
+
+type ScoreResult = RemiScoreResult & {
+  source?: "watchlist" | "lookup";
+  cached?: boolean;
 };
 
 function jsonResponse(status: number, data: unknown): Response {
@@ -43,10 +51,21 @@ Deno.serve(async (req) => {
     return jsonResponse(401, { error: "Missing Authorization header" });
   }
 
+  // Two clients:
+  //   - `supabase`: anon + user JWT. Used for auth.getUser(), reads, and
+  //     the consume_score_lookup RPC (which needs auth.uid() to resolve).
+  //   - `admin`: pure service-role. Used ONLY for DB writes (cache refresh)
+  //     that would otherwise be blocked by the Phase 2 RLS lockdown which
+  //     revokes INSERT/UPDATE/DELETE on watchlist_assets from authenticated.
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
+    SUPABASE_URL,
     Deno.env.get("SUPABASE_ANON_KEY")!,
     { global: { headers: { Authorization: authHeader } } },
+  );
+  const admin = createClient(
+    SUPABASE_URL,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -54,13 +73,8 @@ Deno.serve(async (req) => {
     return jsonResponse(401, { error: "Invalid or expired token" });
   }
 
-  // ── Check user plan for founder-only features ──
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", user.id)
-    .maybeSingle();
-  const isFounder = profile?.plan === "founder";
+  // ── Effective entitlements ──
+  const eff = await getEffectiveEntitlements(supabase, user.id);
 
   // ── Parse & validate body ──
   let body: unknown;
@@ -94,34 +108,158 @@ Deno.serve(async (req) => {
     }
   }
 
-  // ── Fetch scores ──
-  // Errors are structured: { code, message } so the frontend can distinguish
-  // "invalid_symbol" (don't retry) from "fetch_failed" (transient, retry later).
-  const results: Record<string, RemiScoreResult> = {};
+  // ── Server-side source detection: which symbols are on this user's active watchlists? ──
+  // Query watchlist_assets joined to watchlists filtered to this user's active lists.
+  const { data: wlRows, error: wlErr } = await supabase
+    .from("watchlist_assets")
+    .select("symbol, cached_score, last_refreshed_at, watchlist_id, watchlists!inner(user_id, is_active)")
+    .eq("watchlists.user_id", user.id)
+    .eq("watchlists.is_active", true)
+    .eq("is_active", true)
+    .in("symbol", normalized);
+
+  if (wlErr) {
+    return jsonResponse(500, { error: "Failed to resolve watchlist source" });
+  }
+
+  // Map symbol -> best watchlist row (prefer freshest cached_score)
+  type WLRow = {
+    symbol: string;
+    cached_score: number | null;
+    last_refreshed_at: string | null;
+    watchlist_id: string;
+  };
+  const watchlistBySym = new Map<string, WLRow>();
+  const activeWatchlistIds = new Set<string>();
+  for (const row of (wlRows ?? []) as unknown as WLRow[]) {
+    activeWatchlistIds.add(row.watchlist_id);
+    const sym = row.symbol.toUpperCase();
+    const existing = watchlistBySym.get(sym);
+    if (!existing) {
+      watchlistBySym.set(sym, row);
+      continue;
+    }
+    const a = existing.last_refreshed_at ? new Date(existing.last_refreshed_at).getTime() : 0;
+    const b = row.last_refreshed_at ? new Date(row.last_refreshed_at).getTime() : 0;
+    if (b > a) watchlistBySym.set(sym, row);
+  }
+
+  const results: Record<string, ScoreResult> = {};
   const errors: Record<string, { code: string; message: string }> = {};
+
+  const freshnessMs = eff.entitlements.watchlistScoreFreshnessSeconds * 1000;
+  const isPaidOrOwner = eff.isOwner || eff.plan !== "free";
+
+  let upstreamCalls = 0;
 
   for (let i = 0; i < normalized.length; i++) {
     const sym = normalized[i];
+    const wlRow = watchlistBySym.get(sym);
+    const source: "watchlist" | "lookup" = wlRow ? "watchlist" : "lookup";
+
     try {
-      const result = await getRemiScore(sym);
-      results[sym] = result;
+      if (source === "watchlist") {
+        // Free users: serve cached if fresh; else recompute and update row.
+        if (!isPaidOrOwner) {
+          const lastMs = wlRow!.last_refreshed_at
+            ? new Date(wlRow!.last_refreshed_at).getTime()
+            : 0;
+          const isFresh =
+            wlRow!.cached_score !== null &&
+            lastMs > 0 &&
+            Date.now() - lastMs < freshnessMs;
+
+          if (isFresh) {
+            // Cached path — return a minimal result shaped like RemiScoreResult.
+            const cachedResult = {
+              symbol: sym,
+              score: wlRow!.cached_score as number,
+              source: "watchlist" as const,
+              cached: true,
+            } as ScoreResult;
+            results[sym] = cachedResult;
+            continue;
+          }
+
+          // Stale or absent — recompute and persist.
+          if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
+          upstreamCalls++;
+          const fresh = await getRemiScore(sym);
+          const nowIso = new Date().toISOString();
+
+          // Scope update by symbol AND only watchlists owned by this user.
+          // Uses `admin` (service-role) because Phase 2 RLS lockdown revokes
+          // UPDATE on watchlist_assets from authenticated. Without this, the
+          // write silently fails and the 4h cache is effectively bypassed.
+          const wlIds = [...activeWatchlistIds];
+          if (wlIds.length > 0) {
+            const { error: cacheErr } = await admin
+              .from("watchlist_assets")
+              .update({ cached_score: fresh.score, last_refreshed_at: nowIso })
+              .eq("symbol", sym)
+              .in("watchlist_id", wlIds);
+            if (cacheErr) {
+              console.error(`score-api cache refresh failed for ${sym}:`, cacheErr);
+            }
+          }
+
+          const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
+          results[sym] = out;
+        } else {
+          // Paid/owner: always real-time.
+          if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
+          upstreamCalls++;
+          const fresh = await getRemiScore(sym);
+          const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
+          results[sym] = out;
+        }
+      } else {
+        // Source = lookup
+        const gate = await canLookupScore(supabase, user.id, sym);
+        if (!gate.allowed) {
+          errors[sym] = {
+            code: gate.code ?? "LOOKUP_DENIED",
+            message: gate.reason ?? "Lookup denied",
+          };
+          continue;
+        }
+
+        // Atomic quota consumption for free users with a daily limit.
+        // The RPC derives uid via auth.uid() and cap via profiles.plan, so
+        // we pass no arguments — see 20260408120000_harden_consume_score_lookup.sql.
+        if (!eff.isOwner && eff.entitlements.dailyScoreLookupLimit !== null) {
+          const { data: ok, error: rpcErr } = await supabase.rpc("consume_score_lookup");
+          if (rpcErr || ok === false) {
+            errors[sym] = {
+              code: "RATE_LIMITED",
+              message: "Daily score lookup limit reached. Upgrade for unlimited lookups.",
+            };
+            continue;
+          }
+        }
+
+        if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
+        upstreamCalls++;
+        const fresh = await getRemiScore(sym);
+        const out = { ...fresh, source: "lookup" as const } as ScoreResult;
+        results[sym] = out;
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
-      const isInvalid = message.includes("Binance API error 4") || message.includes("No data") || message.includes("invalid_symbol") || message.includes("not found");
+      const isInvalid =
+        message.includes("Binance API error 4") ||
+        message.includes("No data") ||
+        message.includes("invalid_symbol") ||
+        message.includes("not found");
       const code = isInvalid ? "invalid_symbol" : "fetch_failed";
       errors[sym] = { code, message };
     }
-
-    // Rate-limit delay between symbols (same as existing engine.ts pattern)
-    if (i < normalized.length - 1) {
-      await new Promise((r) => setTimeout(r, 300));
-    }
   }
 
-  // Strip engine detail for non-founders
-  if (!isFounder) {
+  // Strip engine detail for non-owners
+  if (!eff.isOwner) {
     for (const sym of Object.keys(results)) {
-      delete (results[sym] as Record<string, unknown>).detail;
+      delete (results[sym] as unknown as Record<string, unknown>).detail;
     }
   }
 

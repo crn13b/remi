@@ -35,10 +35,11 @@ import RemiScoreCard from "./components/dashboard/RemiScoreCard";
 import FoundingBadge from "./components/dashboard/FoundingBadge";
 import OwnerBadge from "./components/dashboard/OwnerBadge";
 import AlertsPage from "./components/alerts/AlertsPage";
-import { FounderDashboard } from "./components/founder/FounderDashboard";
 import { Alert, AlertEvent, Aggressiveness, NudgeFrequency, NotificationPreferences, UserConnection } from "./components/alerts/types";
 import * as alertService from "./services/alertService";
+import { updateNotificationPrefs } from "./services/meService";
 import { searchCatalog, searchGeckoTerminal, searchBinance, type CatalogEntry } from "./data/assetCatalog";
+import { useEntitlements } from "./hooks/useEntitlements";
 
 // ─── Watchlist Types ───
 import type { WatchlistGroup } from "./services/watchlistService";
@@ -111,20 +112,28 @@ const App: React.FC = () => {
 
     // ─── Auth State ───
     const [userId, setUserId] = useState<string | null>(null);
-    const [isFounder, setIsFounder] = useState(false);
+    // Per spec, UI must never read `ent.plan` directly — use dedicated flags.
+    const { data: ent, refresh: refreshEntitlements } = useEntitlements();
+    const isFoundingMember = ent?.entitlements.foundingMemberBadge === true;
+    const isOwner = ent?.isOwner === true;
+    const dailyLookupsRemaining = ent?.dailyScoreLookupsRemaining ?? null;
+    const dailyLookupLimit = ent?.entitlements.dailyScoreLookupLimit ?? null;
+    const lookupsExhausted = dailyLookupLimit !== null && dailyLookupsRemaining === 0;
     const [userPlan, setUserPlan] = useState<string>('free');
     const [userEmail, setUserEmail] = useState<string>('');
     const [userMeta, setUserMeta] = useState<{ first_name?: string; last_name?: string; trades?: string } | null>(null);
 
+    const [alertTrialStartedAt, setAlertTrialStartedAt] = useState<string | null>(null);
+
     const fetchProfile = async (uid: string) => {
         const { data } = await supabase
             .from("profiles")
-            .select("plan")
+            .select("plan, alert_trial_started_at")
             .eq("id", uid)
             .maybeSingle();
         const plan = data?.plan ?? 'free';
         setUserPlan(plan);
-        setIsFounder(plan === "founder");
+        setAlertTrialStartedAt((data as { alert_trial_started_at?: string | null } | null)?.alert_trial_started_at ?? null);
     };
 
     const loadUserAlerts = async (uid: string) => {
@@ -164,15 +173,21 @@ const App: React.FC = () => {
                 setUserMeta(session.user.user_metadata ?? null);
             }
         });
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                const uid = session.user.id;
-                setUserId(uid);
-                fetchProfile(uid);
-                loadUserAlerts(uid);
-                setUserEmail(session.user.email ?? '');
-                setUserMeta(session.user.user_metadata ?? null);
+        // Use getUser() instead of getSession() on initial load: getSession()
+        // only reads localStorage and trusts a cached JWT, so a deleted/revoked
+        // user with a stale token still appears logged-in. getUser() round-trips
+        // to the auth server and returns null for invalidated tokens.
+        supabase.auth.getUser().then(({ data: { user }, error }) => {
+            if (error || !user) {
+                supabase.auth.signOut().catch(() => {});
+                window.location.href = '/index.html';
+                return;
             }
+            setUserId(user.id);
+            fetchProfile(user.id);
+            loadUserAlerts(user.id);
+            setUserEmail(user.email ?? '');
+            setUserMeta(user.user_metadata ?? null);
         });
         return () => subscription.unsubscribe();
     }, []);
@@ -217,25 +232,55 @@ const App: React.FC = () => {
     }, [userId]);
 
     // ─── Alert Handlers (Supabase-backed) ───
+    // Mutation errors (including tier-gate 402/403) are surfaced via window.alert
+    // and optimistic UI state is rolled back to the pre-mutation snapshot.
+    const reportMutationError = (action: string, err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`Failed to ${action}:`, err);
+        window.alert(`${action} failed: ${msg}`);
+    };
+
     const handleCreateAlert = async (data: Omit<Alert, 'id' | 'user_id' | 'last_triggered_at' | 'last_score' | 'created_at'>) => {
         if (!userId) return;
-        const newAlert = await alertService.createAlert(userId, data);
-        if (newAlert) setUserAlerts(prev => [newAlert, ...prev]);
+        try {
+            const newAlert = await alertService.createAlert(userId, data);
+            setUserAlerts(prev => [newAlert, ...prev]);
+        } catch (err) {
+            reportMutationError('create alert', err);
+        }
     };
 
     const handleUpdateAlert = async (updated: Alert) => {
-        setUserAlerts(prev => prev.map(a => a.id === updated.id ? updated : a));
-        await alertService.updateAlert(updated);
+        const prev = userAlerts;
+        setUserAlerts(prev.map(a => a.id === updated.id ? updated : a));
+        try {
+            await alertService.updateAlert(updated);
+        } catch (err) {
+            setUserAlerts(prev);
+            reportMutationError('update alert', err);
+        }
     };
 
     const handleToggleAlert = async (id: string, active: boolean) => {
-        setUserAlerts(prev => prev.map(a => a.id === id ? { ...a, is_active: active } : a));
-        await alertService.toggleAlert(id, active);
+        const prev = userAlerts;
+        setUserAlerts(prev.map(a => a.id === id ? { ...a, is_active: active } : a));
+        try {
+            await alertService.toggleAlert(id, active);
+        } catch (err) {
+            setUserAlerts(prev);
+            reportMutationError('toggle alert', err);
+        }
     };
 
     const handleDeleteAlert = async (id: string) => {
-        setUserAlerts(prev => prev.filter(a => a.id !== id));
-        await alertService.deleteAlert(id);
+        const prev = userAlerts;
+        setUserAlerts(prev.filter(a => a.id !== id));
+        try {
+            await alertService.deleteAlert(id);
+        } catch (err) {
+            setUserAlerts(prev);
+            reportMutationError('delete alert', err);
+        }
     };
 
     const handleMarkEventRead = async (id: string) => {
@@ -258,21 +303,21 @@ const App: React.FC = () => {
     const handleNudgeEnabledChange = async (enabled: boolean) => {
         setNudgeEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ nudge_enabled: enabled }));
+            await updateNotificationPrefs({ nudge_enabled: enabled });
         }
     };
 
     const handleNudgeFrequencyChange = async (freq: NudgeFrequency) => {
         setNudgeFrequency(freq);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ nudge_frequency: freq }));
+            await updateNotificationPrefs({ nudge_frequency: freq });
         }
     };
 
     const handleNudgeTimeChange = async (time: string) => {
         setNudgeTime(time);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ nudge_time: time }));
+            await updateNotificationPrefs({ nudge_time: time });
         }
     };
 
@@ -283,28 +328,38 @@ const App: React.FC = () => {
         // Debounce DB writes for rapid slider drags
         if (aggressivenessDebounceRef.current) clearTimeout(aggressivenessDebounceRef.current);
         aggressivenessDebounceRef.current = setTimeout(() => {
-            alertService.upsertNotificationPrefs(buildPrefs({ global_aggressiveness: value }));
+            updateNotificationPrefs({ global_aggressiveness: value });
         }, 500);
     };
 
     const handleEmailEnabledChange = async (enabled: boolean) => {
         setEmailEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ email_enabled: enabled }));
+            await updateNotificationPrefs({ email_enabled: enabled });
         }
     };
 
     const handleDiscordEnabledChange = async (enabled: boolean) => {
         setDiscordEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ discord_enabled: enabled }));
+            buildPrefs({ discord_enabled: enabled });
+            try {
+                await updateNotificationPrefs({ discord_enabled: enabled });
+            } catch (err) {
+                console.error('Failed to update discord pref:', err);
+            }
         }
     };
 
     const handleTelegramEnabledChange = async (enabled: boolean) => {
         setTelegramEnabled(enabled);
         if (userId) {
-            await alertService.upsertNotificationPrefs(buildPrefs({ telegram_enabled: enabled }));
+            buildPrefs({ telegram_enabled: enabled });
+            try {
+                await updateNotificationPrefs({ telegram_enabled: enabled });
+            } catch (err) {
+                console.error('Failed to update telegram pref:', err);
+            }
         }
     };
 
@@ -315,10 +370,12 @@ const App: React.FC = () => {
         // Auto-enable the channel that was just connected
         if (provider === 'discord') {
             setDiscordEnabled(true);
-            await alertService.upsertNotificationPrefs(buildPrefs({ discord_enabled: true }));
+            buildPrefs({ discord_enabled: true });
+            try { await updateNotificationPrefs({ discord_enabled: true }); } catch (err) { console.error(err); }
         } else if (provider === 'telegram') {
             setTelegramEnabled(true);
-            await alertService.upsertNotificationPrefs(buildPrefs({ telegram_enabled: true }));
+            buildPrefs({ telegram_enabled: true });
+            try { await updateNotificationPrefs({ telegram_enabled: true }); } catch (err) { console.error(err); }
         }
     };
 
@@ -348,11 +405,22 @@ const App: React.FC = () => {
         ).slice(0, 5)
         : [];
 
+    const maxWatchlists = ent?.entitlements.maxWatchlists ?? Number.POSITIVE_INFINITY;
+    const maxTickersPerWatchlist = ent?.entitlements.maxTickersPerWatchlist ?? Number.POSITIVE_INFINITY;
+    const atWatchlistCap = watchlists.length >= maxWatchlists;
+    const activeWatchlistAssetCount = watchlists.find(w => w.id === activeWatchlistId)?.assets.length ?? 0;
+    const atTickerPerListCap = activeWatchlistAssetCount >= maxTickersPerWatchlist;
+
     const addAssetToWatchlist = (asset: Asset) => {
         if (!activeWatchlistId) return;
+        if (atTickerPerListCap) {
+            window.alert(`This watchlist is at its ${maxTickersPerWatchlist}-ticker limit. Upgrade to add more.`);
+            return;
+        }
+        const listIdAtCall = activeWatchlistId;
 
         setWatchlists(prev => prev.map(wl =>
-            wl.id === activeWatchlistId
+            wl.id === listIdAtCall
                 ? { ...wl, assets: [...wl.assets, asset] }
                 : wl
         ));
@@ -360,8 +428,15 @@ const App: React.FC = () => {
         setLoadingSymbols(prev => new Set(prev).add(asset.symbol));
         setTimeout(() => setRecentlyAddedSymbol(null), 600);
 
-        // Persist to Supabase
-        watchlistService.addAsset(activeWatchlistId, asset.symbol, asset.name).catch(console.error);
+        // Persist to Supabase. On failure, roll back the optimistic insert and surface the error.
+        watchlistService.addAsset(listIdAtCall, asset.symbol, asset.name).catch((err) => {
+            setWatchlists(prev => prev.map(wl =>
+                wl.id === listIdAtCall
+                    ? { ...wl, assets: wl.assets.filter(a => a.symbol !== asset.symbol) }
+                    : wl
+            ));
+            reportMutationError('add asset to watchlist', err);
+        });
 
         // Fetch live score if not already set
         if (!asset.score && isSupported(asset.symbol)) {
@@ -404,33 +479,50 @@ const App: React.FC = () => {
     };
 
     const removeAssetFromWatchlist = (symbol: string) => {
+        if (!activeWatchlistId) return;
+        const listIdAtCall = activeWatchlistId;
+        const snapshot = watchlists;
         setWatchlists(prev => prev.map(wl =>
-            wl.id === activeWatchlistId
+            wl.id === listIdAtCall
                 ? { ...wl, assets: wl.assets.filter(a => a.symbol !== symbol) }
                 : wl
         ));
-        if (activeWatchlistId) {
-            watchlistService.removeAsset(activeWatchlistId, symbol).catch(console.error);
-        }
+        watchlistService.removeAsset(listIdAtCall, symbol).catch((err) => {
+            setWatchlists(snapshot);
+            reportMutationError('remove asset from watchlist', err);
+        });
     };
 
     const createNewWatchlist = async () => {
         if (!userId) return;
+        if (atWatchlistCap) {
+            window.alert(`You've reached your ${maxWatchlists}-watchlist limit. Upgrade for more.`);
+            return;
+        }
         const position = watchlists.length;
-        const id = await watchlistService.createWatchlist(userId, 'Untitled', position);
-        setWatchlists(prev => [...prev, { id, name: '', assets: [] }]);
-        setActiveWatchlistId(id);
-        setEditingTabId(id);
-        setEditingTabName('');
+        try {
+            const id = await watchlistService.createWatchlist(userId, 'Untitled', position);
+            setWatchlists(prev => [...prev, { id, name: '', assets: [] }]);
+            setActiveWatchlistId(id);
+            setEditingTabId(id);
+            setEditingTabName('');
+        } catch (err) {
+            reportMutationError('create watchlist', err);
+        }
     };
 
     const finishEditingTab = () => {
         if (editingTabId) {
             const name = editingTabName.trim() || 'Untitled';
+            const targetId = editingTabId;
+            const snapshot = watchlists;
             setWatchlists(prev => prev.map(wl =>
-                wl.id === editingTabId ? { ...wl, name } : wl
+                wl.id === targetId ? { ...wl, name } : wl
             ));
-            watchlistService.renameWatchlist(editingTabId, name).catch(console.error);
+            watchlistService.renameWatchlist(targetId, name).catch((err) => {
+                setWatchlists(snapshot);
+                reportMutationError('rename watchlist', err);
+            });
             setEditingTabId(null);
             setEditingTabName('');
         }
@@ -438,9 +530,15 @@ const App: React.FC = () => {
 
     const deleteWatchlist = (id: string) => {
         if (watchlists.length <= 1) return;
+        const snapshot = watchlists;
+        const prevActive = activeWatchlistId;
         setWatchlists(prev => prev.filter(wl => wl.id !== id));
         if (activeWatchlistId === id) setActiveWatchlistId(watchlists[0].id);
-        watchlistService.deleteWatchlist(id).catch(console.error);
+        watchlistService.deleteWatchlist(id).catch((err) => {
+            setWatchlists(snapshot);
+            setActiveWatchlistId(prevActive);
+            reportMutationError('delete watchlist', err);
+        });
     };
 
     // Search State
@@ -458,6 +556,12 @@ const App: React.FC = () => {
     const searchInputRef = useRef<HTMLInputElement>(null);
     const geckoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [searchStatus, setSearchStatus] = React.useState<"idle" | "analyzing" | "complete">("idle"); // Kept for compatibility with existing render logic, but controlled by remiScanState effectively
+    // Refresh entitlements (daily lookups remaining) after a score lookup completes
+    useEffect(() => {
+        if (searchStatus === "complete") {
+            refreshEntitlements().catch(() => {});
+        }
+    }, [searchStatus]);
     const [searchStep, setSearchStep] = useState(0);
     const [isFilling, setIsFilling] = useState(false);
     const [searchResult, setSearchResult] = useState<Asset | null>(null);
@@ -576,6 +680,10 @@ const App: React.FC = () => {
 
         setShowSuggestions(false);
         setSearchSuggestions([]);
+        // Kick off the score fetch here (the user action), NOT in an effect —
+        // React.StrictMode double-invokes effects in dev, which caused every
+        // scan to consume 2 daily lookups instead of 1.
+        pendingScore.current = getRemiScore(symbol.toUpperCase());
         setSearchStatus("analyzing");
 
         // Delay unmounting the DOM node by 500ms so CSS exit animations can physically render
@@ -607,14 +715,6 @@ const App: React.FC = () => {
 
     // Step durations (ms) — intentionally irregular to feel like real async work
     const STEP_DURATIONS = [3500, 2800, 1500, 3400, 3100, 1700, 1300];
-
-    // Start fetching live score as soon as analysis begins (runs during animation)
-    useEffect(() => {
-        if (searchStatus === "analyzing") {
-            const querySymbol = searchQuery.trim().toUpperCase() || "BTC";
-            pendingScore.current = getRemiScore(querySymbol);
-        }
-    }, [searchStatus]);
 
     useEffect(() => {
         if (searchStatus === "analyzing") {
@@ -724,12 +824,19 @@ const App: React.FC = () => {
                     />
                 </div>
 
-                {isFounder && (
+                {(isOwner || isFoundingMember) && (
                     <div className={`w-full flex flex-col items-center gap-1.5 transition-all duration-300 ${isSidebarExpanded ? "px-4" : "px-1"}`}>
-                        {isSidebarExpanded
-                            ? <><OwnerBadge variant="pill" theme={theme} /><FoundingBadge variant="pill" theme={theme} /></>
-                            : <><OwnerBadge variant="icon" theme={theme} /><FoundingBadge variant="icon" theme={theme} /></>
-                        }
+                        {isSidebarExpanded ? (
+                            <>
+                                {isOwner && <OwnerBadge variant="pill" theme={theme} />}
+                                {isFoundingMember && <FoundingBadge variant="pill" theme={theme} />}
+                            </>
+                        ) : (
+                            <>
+                                {isOwner && <OwnerBadge variant="icon" theme={theme} />}
+                                {isFoundingMember && <FoundingBadge variant="icon" theme={theme} />}
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -738,7 +845,7 @@ const App: React.FC = () => {
                         { id: ViewType.SEARCH, icon: Search, label: "REMi Score" },
                         { id: ViewType.WATCHLIST, icon: List, label: "Watchlist" },
                         { id: ViewType.ALERTS, icon: Bell, label: "Alerts" },
-                        ...(isFounder ? [{ id: ViewType.FOUNDER, icon: Terminal, label: "Engine" }] : []),
+                        ...(isOwner ? [{ id: ViewType.OWNER, icon: Terminal, label: "Engine" }] : []),
                     ].map((item) => (
                         <div
                             key={item.id}
@@ -859,7 +966,7 @@ const App: React.FC = () => {
                                 { id: ViewType.SEARCH, icon: Search, label: "REMi Score" },
                                 { id: ViewType.WATCHLIST, icon: List, label: "Watchlist" },
                                 { id: ViewType.ALERTS, icon: Bell, label: "Alerts" },
-                                ...(isFounder ? [{ id: ViewType.FOUNDER, icon: Terminal, label: "Engine" }] : []),
+                                ...(isOwner ? [{ id: ViewType.OWNER, icon: Terminal, label: "Engine" }] : []),
                             ].map((item) => (
                                 <button
                                     key={item.id}
@@ -893,9 +1000,9 @@ const App: React.FC = () => {
                         <div
                             className={`p-6 border-t ${theme === "light" ? "border-slate-200" : "border-[#27273a]"} flex flex-col items-center gap-4`}
                         >
-                            {isFounder && <>
-                                <OwnerBadge variant="pill" theme={theme} />
-                                <FoundingBadge variant="pill" theme={theme} />
+                            {(isOwner || isFoundingMember) && <>
+                                {isOwner && <OwnerBadge variant="pill" theme={theme} />}
+                                {isFoundingMember && <FoundingBadge variant="pill" theme={theme} />}
                             </>}
                             <button
                                 onClick={() => { setCurrentView(ViewType.PROFILE); setIsMobileMenuOpen(false); }}
@@ -1029,12 +1136,21 @@ const App: React.FC = () => {
                                                             />
                                                             <button
                                                                 onClick={() => handleSmartSearch()}
-                                                                disabled={!searchQuery.trim()}
-                                                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${searchQuery.trim() ? "bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-lg hover:shadow-blue-500/25 hover:scale-105" : "bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed"}`}
+                                                                disabled={!searchQuery.trim() || lookupsExhausted}
+                                                                title={lookupsExhausted ? "Daily lookup limit reached — upgrade for more" : ""}
+                                                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${searchQuery.trim() && !lookupsExhausted ? "bg-gradient-to-r from-blue-500 to-emerald-500 text-white shadow-lg hover:shadow-blue-500/25 hover:scale-105" : "bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed"}`}
                                                             >
                                                                 <ArrowUp size={24} strokeWidth={2.5} />
                                                             </button>
                                                         </div>
+                                                        {dailyLookupLimit !== null && dailyLookupsRemaining !== null && (
+                                                            <div className={`text-[10px] mt-2 text-center ${theme === "light" ? "text-slate-500" : "text-gray-400"}`}>
+                                                                Daily lookups remaining: {dailyLookupsRemaining}/{dailyLookupLimit}
+                                                                {lookupsExhausted && (
+                                                                    <> · <a href="/pricing.html?reason=daily-lookup-cap" className="underline">Upgrade</a></>
+                                                                )}
+                                                            </div>
+                                                        )}
 
                                                         {/* Autocomplete Dropdown */}
                                                         {showSuggestions && (suggestionsLoading || searchSuggestions.length > 0) && (
@@ -1290,7 +1406,7 @@ const App: React.FC = () => {
                                             score={liveScore}
                                             asset={searchResult}
                                             theme={theme}
-                                            isFounder={isFounder}
+                                            isFoundingMember={isFoundingMember}
                                             failed={scoreFailed}
                                             onReset={cancelAnalysis}
                                         />
@@ -1423,7 +1539,9 @@ const App: React.FC = () => {
                                                 <div className={`mt-2 pt-2 border-t ${theme === "light" ? "border-slate-100" : "border-white/5"}`}>
                                                     <button
                                                         onClick={createNewWatchlist}
-                                                        className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-300 border border-dashed ${theme === "light"
+                                                        disabled={atWatchlistCap}
+                                                        title={atWatchlistCap ? `Upgrade to create more than ${maxWatchlists} watchlists` : ''}
+                                                        className={`w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-300 border border-dashed ${atWatchlistCap ? 'opacity-50 cursor-not-allowed' : ''} ${theme === "light"
                                                             ? "text-slate-500 border-slate-300 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50"
                                                             : "text-gray-400 border-white/20 hover:text-blue-400 hover:border-blue-500/50 hover:bg-blue-500/10"
                                                             }`}
@@ -1888,11 +2006,12 @@ const App: React.FC = () => {
                                 userConnections={userConnections}
                                 onConnectionComplete={handleConnectionComplete}
                                 userId={userId}
+                                trialStartedAt={alertTrialStartedAt}
                             />
                         )}
-                        {/* ── Founder Dashboard ── */}
-                        {currentView === ViewType.FOUNDER && isFounder && (
-                            <FounderDashboard theme={theme} />
+                        {/* ── Owner Dashboard (engine inspector) ── */}
+                        {currentView === ViewType.OWNER && isOwner && (
+                            <div className="p-8 text-sm opacity-60">Owner dashboard unavailable in public build.</div>
                         )}
                         {/* ── Profile View ── */}
                         {currentView === ViewType.PROFILE && (
@@ -1919,9 +2038,9 @@ const App: React.FC = () => {
                                                 </p>
                                                 <p className={`text-sm ${theme === "light" ? "text-slate-500" : "text-gray-400"}`}>{userEmail}</p>
                                             </div>
-                                            {isFounder && <div className="flex flex-col gap-1.5">
-                                                <OwnerBadge variant="pill" theme={theme} />
-                                                <FoundingBadge variant="pill" theme={theme} />
+                                            {(isOwner || isFoundingMember) && <div className="flex flex-col gap-1.5">
+                                                {isOwner && <OwnerBadge variant="pill" theme={theme} />}
+                                                {isFoundingMember && <FoundingBadge variant="pill" theme={theme} />}
                                             </div>}
                                         </div>
                                         <div className={`grid grid-cols-2 gap-4 pt-4 border-t ${theme === "light" ? "border-slate-100" : "border-[#27273a]"}`}>

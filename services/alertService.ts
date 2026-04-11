@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabaseClient';
+import { invoke } from './_invoke';
 import type { Alert, AlertEvent, AlertDirection, UrgencyLevel, AlertEventType, NotificationPreferences, Aggressiveness, NudgeFrequency, UserConnection } from '../components/alerts/types';
 import { LONG_THRESHOLDS, SHORT_THRESHOLDS, NUDGE_INTERVAL_MS, generateNudgeMessage } from '../components/alerts/constants';
 import type { RemiScoreResult } from './remiScore';
@@ -42,58 +43,31 @@ export async function loadAlerts(userId: string): Promise<Alert[]> {
     return data ?? [];
 }
 
-export async function createAlert(userId: string, input: CreateAlertInput): Promise<Alert | null> {
-    const { data, error } = await supabase
-        .from('alerts')
-        .insert({
-            user_id: userId,
-            symbol: input.symbol,
-            direction: input.direction,
-            aggressiveness: input.aggressiveness,
-            is_active: input.is_active,
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Failed to create alert:', error);
-        return null;
-    }
-    return data;
+// Signature preserved for App.tsx call sites. `userId` is ignored here —
+// the edge function derives it from the JWT. Errors (including tier-gate
+// 402/403 rejections) are re-thrown so callers can surface them to the user
+// and roll back any optimistic UI state.
+export async function createAlert(_userId: string, input: CreateAlertInput): Promise<Alert> {
+    const res = await invoke<{ alert: Alert }>('create-alert', input);
+    return res.alert ?? (res as unknown as Alert);
 }
 
 export async function updateAlert(alert: Alert): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .update({
-            symbol: alert.symbol,
-            direction: alert.direction,
-            aggressiveness: alert.aggressiveness,
-            is_active: alert.is_active,
-            last_score: alert.last_score,
-            last_triggered_at: alert.last_triggered_at,
-        })
-        .eq('id', alert.id);
-
-    if (error) console.error('Failed to update alert:', error);
+    await invoke('update-alert', {
+        id: alert.id,
+        symbol: alert.symbol,
+        direction: alert.direction,
+        aggressiveness: alert.aggressiveness,
+        is_active: alert.is_active,
+    });
 }
 
 export async function toggleAlert(id: string, isActive: boolean): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .update({ is_active: isActive })
-        .eq('id', id);
-
-    if (error) console.error('Failed to toggle alert:', error);
+    await invoke('toggle-alert', { id, is_active: isActive });
 }
 
 export async function deleteAlert(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('alerts')
-        .delete()
-        .eq('id', id);
-
-    if (error) console.error('Failed to delete alert:', error);
+    await invoke('delete-alert', { id });
 }
 
 // ─── Alert Events CRUD ──────────────────────────────────────────
@@ -169,14 +143,6 @@ export async function loadNotificationPrefs(userId: string): Promise<Notificatio
         return null;
     }
     return data;
-}
-
-export async function upsertNotificationPrefs(prefs: NotificationPreferences): Promise<void> {
-    const { error } = await supabase
-        .from('notification_preferences')
-        .upsert(prefs, { onConflict: 'user_id' });
-
-    if (error) console.error('Failed to upsert notification prefs:', error);
 }
 
 // ─── User Connections ───────────────────────────────────────────

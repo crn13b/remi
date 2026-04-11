@@ -10,6 +10,7 @@ import AggressivenessSlider from './AggressivenessSlider';
 import AlertTutorial, { TutorialRestartButton } from './AlertTutorial';
 import * as alertService from '../../services/alertService';
 import { supabase } from '../../services/supabaseClient';
+import { useEntitlements } from '../../hooks/useEntitlements';
 
 interface AlertsPageProps {
     theme: 'dark' | 'light';
@@ -41,7 +42,42 @@ interface AlertsPageProps {
     userConnections?: UserConnection[];
     onConnectionComplete?: (provider: string) => void;
     userId?: string | null;
+    trialStartedAt?: string | null;
 }
+
+const TrialBanner: React.FC<{ isDark: boolean; trialDays: number; trialStartedAt: string | null }> = ({ isDark, trialDays, trialStartedAt }) => {
+    if (!trialStartedAt) {
+        return (
+            <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+                isDark ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-800'
+            }`}>
+                You have a {trialDays}-day alert trial. It starts when your first alert fires.
+            </div>
+        );
+    }
+    const startedMs = new Date(trialStartedAt).getTime();
+    const expiresMs = startedMs + trialDays * 86_400_000;
+    const remainingMs = expiresMs - Date.now();
+    if (remainingMs > 0) {
+        const daysLeft = Math.ceil(remainingMs / 86_400_000);
+        return (
+            <div className={`mb-4 rounded-xl border px-4 py-3 text-sm flex items-center justify-between gap-4 ${
+                isDark ? 'bg-amber-500/10 border-amber-500/20 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+            }`}>
+                <span>{daysLeft} day{daysLeft === 1 ? '' : 's'} left in your alert trial.</span>
+                <a href="/pricing" className="font-semibold underline whitespace-nowrap">Upgrade</a>
+            </div>
+        );
+    }
+    return (
+        <div className={`mb-4 rounded-xl border px-4 py-3 text-sm flex items-center justify-between gap-4 ${
+            isDark ? 'bg-red-500/10 border-red-500/20 text-red-300' : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+            <span>Your {trialDays}-day alert trial has expired. Alerts are paused.</span>
+            <a href="/pricing" className="font-semibold underline whitespace-nowrap">Upgrade to reactivate</a>
+        </div>
+    );
+};
 
 /* Drum-roll column for a single time unit */
 const DrumColumn: React.FC<{
@@ -329,8 +365,13 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
     userConnections = [],
     onConnectionComplete,
     userId,
+    trialStartedAt,
 }) => {
     const isDark = theme === 'dark';
+    const { data: ent } = useEntitlements();
+    const entitlements = ent?.entitlements;
+    const distinctTickers = new Set(alerts.filter((a) => a.is_active).map((a) => a.symbol.toUpperCase()));
+    const atTickerCap = !!(entitlements && distinctTickers.size >= entitlements.maxAlertTickers);
 
     const [showForm, setShowForm] = useState(false);
     const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
@@ -531,13 +572,24 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                     <button
                         id="alert-new-btn"
                         onClick={() => handleOpenCreate()}
-                        className="relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors cursor-pointer"
+                        disabled={atTickerCap}
+                        title={atTickerCap ? 'Upgrade to add more tickers' : ''}
+                        className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors ${atTickerCap ? 'bg-slate-500 cursor-not-allowed opacity-60' : 'bg-blue-600 hover:bg-blue-500 cursor-pointer'}`}
                     >
                         <Plus size={16} />
                         New Alert
                     </button>
                 </div>
             </header>
+
+            {/* Trial countdown banner */}
+            {entitlements?.alertTrialDays != null && (
+                <TrialBanner
+                    isDark={isDark}
+                    trialDays={entitlements.alertTrialDays}
+                    trialStartedAt={trialStartedAt ?? null}
+                />
+            )}
 
             {/* Hero Section — always visible */}
             <div className="mb-5">
@@ -718,6 +770,7 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                                 </div>
 
                                 {/* Discord */}
+                                {entitlements?.channels.discord && (<>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={discordEnabled ? (isDark ? 'text-indigo-400' : 'text-indigo-600') : (isDark ? 'text-gray-600' : 'text-slate-400')}>
@@ -753,8 +806,11 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                                         Waiting for Discord authorization...
                                     </p>
                                 )}
+                                </>
+                                )}
 
                                 {/* Telegram */}
+                                {entitlements?.channels.telegram && (<>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={telegramEnabled ? (isDark ? 'text-sky-400' : 'text-sky-600') : (isDark ? 'text-gray-600' : 'text-slate-400')}>
@@ -826,6 +882,8 @@ const AlertsPage: React.FC<AlertsPageProps> = ({
                                             </button>
                                         </p>
                                     </div>
+                                )}
+                                </>
                                 )}
                             </div>
                         </div>

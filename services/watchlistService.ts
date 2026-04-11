@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import { Asset } from "../types";
 import { getBatchScores } from "./remiScore";
+import { invoke } from "./_invoke";
 
 // ─── DB row types ───
 
@@ -28,10 +29,14 @@ export interface WatchlistGroup {
 // ─── Load ───
 
 export async function loadWatchlists(userId: string): Promise<WatchlistGroup[]> {
+  // Only load active watchlists/assets. Soft-disabled rows (from plan
+  // downgrades via reconcileEntitlements) must not appear in the UI and
+  // must not count against cap math.
   const { data: lists, error: listsErr } = await supabase
     .from("watchlists")
     .select("*")
     .eq("user_id", userId)
+    .eq("is_active", true)
     .order("position", { ascending: true });
 
   if (listsErr) throw listsErr;
@@ -41,6 +46,7 @@ export async function loadWatchlists(userId: string): Promise<WatchlistGroup[]> 
     .from("watchlist_assets")
     .select("*")
     .in("watchlist_id", lists.map((l: WatchlistRow) => l.id))
+    .eq("is_active", true)
     .order("added_at", { ascending: true });
 
   if (assetsErr) throw assetsErr;
@@ -85,58 +91,40 @@ export async function hydrateWatchlistScores(
 }
 
 // ─── Create watchlist ───
+// Signature preserved for App.tsx call sites. `userId`/`position` are ignored —
+// the edge function derives the user from the JWT and does not track position.
 
-export async function createWatchlist(userId: string, name: string, position: number): Promise<string> {
-  const { data, error } = await supabase
-    .from("watchlists")
-    .insert({ user_id: userId, name, position })
-    .select("id")
-    .single();
-
-  if (error) throw error;
+export async function createWatchlist(_userId: string, name: string, _position: number): Promise<string> {
+  const data = await invoke<{ id: string }>("create-watchlist", { name });
   return data.id;
 }
 
 // ─── Rename watchlist ───
 
 export async function renameWatchlist(watchlistId: string, name: string): Promise<void> {
-  const { error } = await supabase
-    .from("watchlists")
-    .update({ name })
-    .eq("id", watchlistId);
-
-  if (error) throw error;
+  await invoke("rename-watchlist", { id: watchlistId, name });
 }
 
 // ─── Delete watchlist ───
 
 export async function deleteWatchlist(watchlistId: string): Promise<void> {
-  const { error } = await supabase
-    .from("watchlists")
-    .delete()
-    .eq("id", watchlistId);
-
-  if (error) throw error;
+  await invoke("delete-watchlist", { id: watchlistId });
 }
 
 // ─── Add asset to watchlist ───
 
 export async function addAsset(watchlistId: string, symbol: string, name: string): Promise<void> {
-  const { error } = await supabase
-    .from("watchlist_assets")
-    .insert({ watchlist_id: watchlistId, symbol, name });
-
-  if (error && error.code !== "23505") throw error; // ignore duplicate
+  try {
+    await invoke("add-watchlist-asset", { watchlist_id: watchlistId, symbol, name });
+  } catch (err) {
+    // Ignore duplicate-insert errors surfaced as a 409/500 from the edge function
+    const msg = (err as Error).message ?? "";
+    if (!/duplicate|23505|already/i.test(msg)) throw err;
+  }
 }
 
 // ─── Remove asset from watchlist ───
 
 export async function removeAsset(watchlistId: string, symbol: string): Promise<void> {
-  const { error } = await supabase
-    .from("watchlist_assets")
-    .delete()
-    .eq("watchlist_id", watchlistId)
-    .eq("symbol", symbol);
-
-  if (error) throw error;
+  await invoke("remove-watchlist-asset", { watchlist_id: watchlistId, symbol });
 }

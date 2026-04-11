@@ -397,23 +397,19 @@
                             <ul class="space-y-2.5 flex-grow">
                                 <li class="flex items-start gap-2.5">
                                     <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">1 confidence score check per day</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">5 confidence score checks per day</span>
                                 </li>
                                 <li class="flex items-start gap-2.5">
                                     <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">3 tickers in watchlist (price only)</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">1 watchlist, 3 tickers</span>
                                 </li>
                                 <li class="flex items-start gap-2.5">
                                     <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">Daily macro digest email</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Score-based alerts: 3-day trial, 1 ticker</span>
                                 </li>
                                 <li class="flex items-start gap-2.5">
-                                    <span class="material-symbols-outlined feature-dash text-base mt-0.5">remove</span>
-                                    <span class="text-xs text-slate-400">No alerts</span>
-                                </li>
-                                <li class="flex items-start gap-2.5">
-                                    <span class="material-symbols-outlined feature-dash text-base mt-0.5">remove</span>
-                                    <span class="text-xs text-slate-400">No score history</span>
+                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Email notifications</span>
                                 </li>
                             </ul>
                         </div>
@@ -455,11 +451,11 @@
                                 </li>
                                 <li class="flex items-start gap-2.5">
                                     <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">30-day score history</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Email + Discord + Telegram notifications</span>
                                 </li>
                                 <li class="flex items-start gap-2.5">
                                     <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">Full daily macro report</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Real-time watchlist score refresh</span>
                                 </li>
                             </ul>
                         </div>
@@ -487,67 +483,13 @@
                                 </li>
                                 <li class="flex items-start gap-2.5">
                                     <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">Full score history (unlimited lookback)</span>
-                                </li>
-                                <li class="flex items-start gap-2.5">
-                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">Full macro report archive</span>
-                                </li>
-                                <li class="flex items-start gap-2.5">
-                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">Priority support</span>
-                                </li>
-                                <li class="flex items-start gap-2.5">
-                                    <span class="material-symbols-outlined feature-check text-base mt-0.5">check_circle</span>
-                                    <span class="text-xs text-slate-700 dark:text-slate-300">Early access to new features</span>
+                                    <span class="text-xs text-slate-700 dark:text-slate-300">Email + Discord + Telegram notifications</span>
                                 </li>
                             </ul>
                         </div>
 
                     </div>
 
-                    <!-- Pay-Per-Use Callout -->
-                    <div class="animate-fade-up delay-500 mt-6 text-center">
-                        <p class="text-sm text-slate-500 dark:text-slate-400">
-                            Not ready to commit?
-                            <button id="ppu-toggle" class="text-primary font-semibold hover:underline">See pay-per-use options</button>
-                        </p>
-                        <div id="ppu-section" class="hidden mt-6 max-w-2xl mx-auto">
-                            <div class="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
-                                <h4 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Pay as you go</h4>
-                                <div class="grid sm:grid-cols-2 gap-4">
-                                    <div class="flex items-start gap-3 text-left">
-                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">query_stats</span>
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$2.99 per score check</p>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400">Extra checks beyond daily free limit</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-3 text-left">
-                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">notifications_active</span>
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$5.99 for 1-week alerts</p>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400">Alerts on a single ticker for 7 days</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-3 text-left">
-                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">notifications</span>
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$9.99/mo per ticker alerts</p>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400">Unlimited alerts on a single ticker</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-3 text-left">
-                                        <span class="material-symbols-outlined text-primary text-lg mt-0.5">lab_research</span>
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-900 dark:text-white">$9.99 per premium report</p>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400">Deep macro analysis for major events</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -579,16 +521,14 @@
                             <tbody class="text-sm">
                                 <tr class="border-b border-slate-100 dark:border-slate-800">
                                     <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Confidence score checks</td>
-                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">1/day</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">5/day</td>
                                     <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
                                     <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
                                     <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
                                 </tr>
                                 <tr class="border-b border-slate-100 dark:border-slate-800">
                                     <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Score-based alerts</td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
-                                    </td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">3-day trial, 1 ticker</td>
                                     <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">3 tickers</td>
                                     <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
                                     <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
@@ -616,50 +556,18 @@
                                     </td>
                                 </tr>
                                 <tr class="border-b border-slate-100 dark:border-slate-800">
-                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Score history</td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">30 days</td>
-                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Unlimited</td>
-                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Unlimited</td>
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Watchlist score refresh</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Every 4 hours</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Real-time</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Real-time</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Real-time</td>
                                 </tr>
                                 <tr class="border-b border-slate-100 dark:border-slate-800">
-                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Macro analysis</td>
-                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Daily digest</td>
-                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Full daily</td>
-                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Full + archive</td>
-                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Full + archive</td>
-                                </tr>
-                                <tr class="border-b border-slate-100 dark:border-slate-800">
-                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Priority support</td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-green-500 text-lg">check</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
-                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">check</span>
-                                    </td>
-                                </tr>
-                                <tr class="border-b border-slate-100 dark:border-slate-800">
-                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Early feature access</td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg">close</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3" style="border-left: 1px solid #e2e8f0;">
-                                        <span class="material-symbols-outlined text-green-500 text-lg">check</span>
-                                    </td>
-                                    <td class="text-center py-4 px-3" style="border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">
-                                        <span class="material-symbols-outlined text-lg" style="color:#facc15;">check</span>
-                                    </td>
+                                    <td class="py-4 pr-4 text-slate-700 dark:text-slate-300">Notification channels</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Email</td>
+                                    <td class="text-center py-4 px-3 text-slate-500 dark:text-slate-400" style="border-left: 1px solid #e2e8f0;">Email + Discord + Telegram</td>
+                                    <td class="text-center py-4 px-3 font-semibold text-slate-900 dark:text-white" style="border-left: 1px solid #e2e8f0;">Email + Discord + Telegram</td>
+                                    <td class="text-center py-4 px-3 font-semibold" style="color:#facc15; border-left: 2px solid rgba(250,204,21,0.3); border-right: 2px solid rgba(250,204,21,0.3); background: rgba(250,204,21,0.03);">Email + Discord + Telegram</td>
                                 </tr>
                                 <!-- Founder-exclusive rows -->
                                 <tr class="border-b border-slate-100 dark:border-slate-800">
@@ -746,12 +654,6 @@
                             <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">What payment methods do you accept?</h3>
                             <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
                                 We accept all major credit and debit cards. Payment processing is handled securely through Stripe.
-                            </p>
-                        </div>
-                        <div class="pb-6">
-                            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">What happens if I use pay-per-use often?</h3>
-                            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
-                                Pay-per-use is there for flexibility, but the math works out better with a subscription. For example, 4 extra score checks per week at $2.99 each costs ~$48/month, while Core gives you unlimited checks for $19/month.
                             </p>
                         </div>
                     </div>
@@ -865,15 +767,6 @@
             }
         });
 
-        // Pay-per-use toggle
-        const ppuToggle = document.getElementById('ppu-toggle');
-        const ppuSection = document.getElementById('ppu-section');
-        ppuToggle.addEventListener('click', () => {
-            ppuSection.classList.toggle('hidden');
-            ppuToggle.textContent = ppuSection.classList.contains('hidden')
-                ? 'See pay-per-use options'
-                : 'Hide pay-per-use options';
-        });
 
         /* revealFoundingCard() — preserved for swap-back to secret card variant
         function revealFoundingCard() {
