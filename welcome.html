@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>REMi | Welcome</title>
+    <link rel="icon" href="assets/landing/favicon/remi-favicon-transparent.png" type="image/png">
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #welcome-root {
+            width: 100%;
+            max-width: 420px;
+            margin: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="welcome-root"></div>
+    <script type="module" src="/js/welcomeFlow.ts"></script>
+</body>
+</html>
