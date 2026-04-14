@@ -375,6 +375,7 @@ async function handleSubmit(e: Event): Promise<void> {
                         last_name: lastName,
                         trades,
                         referral_source: referral,
+                        profile_complete: true,
                     }
                 }
             });
@@ -396,8 +397,8 @@ async function handleSubmit(e: Event): Promise<void> {
 async function handleGoogle(): Promise<void> {
     setLoading(true);
     const redirectTo = pendingStripeUrl
-        ? window.location.origin + '/pricing.html?stripe_redirect=' + encodeURIComponent(pendingStripeUrl)
-        : window.location.origin + '/dashboard.html';
+        ? window.location.origin + '/welcome.html?stripe_redirect=' + encodeURIComponent(pendingStripeUrl)
+        : window.location.origin + '/welcome.html';
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo }
