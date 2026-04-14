@@ -8,12 +8,14 @@ function getDestination(userId: string): string {
     if (stripeRedirect) {
         // Validate same-origin
         if (stripeRedirect.startsWith('/') && !stripeRedirect.startsWith('//')) {
-            return stripeRedirect + '?client_reference_id=' + userId;
+            const sep = stripeRedirect.includes('?') ? '&' : '?';
+            return stripeRedirect + sep + 'client_reference_id=' + userId;
         }
         try {
             const parsed = new URL(stripeRedirect);
             if (parsed.origin === window.location.origin) {
-                return stripeRedirect + '?client_reference_id=' + userId;
+                const sep = stripeRedirect.includes('?') ? '&' : '?';
+                return stripeRedirect + sep + 'client_reference_id=' + userId;
             }
         } catch { /* invalid URL, fall through */ }
     }
@@ -56,7 +58,7 @@ function showWelcomeScreen(userId: string): void {
             transform: translateY(8px);
             transition: opacity 0.4s ease, transform 0.4s ease;
         ">
-            <img src="assets/landing/logos/remi-text-logo.png" alt="REMi" style="height: 40px; margin: 0 auto 28px;" />
+            <img src="assets/landing/logos/remi-text-logo.png" alt="REMi" style="height: 40px; margin: 0 auto 28px; display: block;" />
             <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 8px;">Welcome to REMi</h2>
             <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 28px;">
                 Looks like this is your first time here.<br>Would you like to set up your account?
@@ -65,7 +67,7 @@ function showWelcomeScreen(userId: string): void {
                 width: 100%;
                 height: 50px;
                 border: none;
-                border-radius: 12px;
+                border-radius: 10px;
                 background: #135bec;
                 color: #fff;
                 font-size: 15px;
@@ -199,7 +201,7 @@ function showProfileForm(userId: string): void {
                         <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8;">&#9662;</span>
                     </div>
                     <button id="pf-submit" type="submit" style="
-                        width: 100%; height: 50px; border: none; border-radius: 12px;
+                        width: 100%; height: 50px; border: none; border-radius: 10px;
                         background: #135bec; color: #fff; font-size: 15px; font-weight: 700;
                         font-family: 'Space Grotesk', sans-serif; cursor: pointer;
                         transition: background 0.2s; margin-top: 4px;
@@ -244,6 +246,14 @@ async function handleProfileSubmit(userId: string): Promise<void> {
     // Hide previous errors
     if (errorEl) errorEl.style.display = 'none';
 
+    // Disable submit button while request is in flight
+    const submitBtn = document.getElementById('pf-submit') as HTMLButtonElement;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.7';
+        submitBtn.style.cursor = 'not-allowed';
+    }
+
     // Update user metadata in Supabase
     const { error } = await supabase.auth.updateUser({
         data: {
@@ -256,6 +266,11 @@ async function handleProfileSubmit(userId: string): Promise<void> {
     });
 
     if (error) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
         if (errorEl) {
             errorEl.textContent = 'Something went wrong. Please try again.';
             errorEl.style.display = 'block';
