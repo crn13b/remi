@@ -12,7 +12,8 @@ export default defineConfig({
             input: {
                 main: './dashboard.html',
                 index: './index.html',
-                pricing: './pricing.html'
+                pricing: './pricing.html',
+                welcome: './welcome.html'
             }
         }
     }
