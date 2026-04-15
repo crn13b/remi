@@ -161,33 +161,35 @@ const App: React.FC = () => {
     };
 
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const handleSession = (session: { user: { id: string; email?: string; user_metadata?: Record<string, unknown> } } | null) => {
             if (!session) {
                 window.location.href = '/index.html';
-            } else {
-                const uid = session.user.id;
-                setUserId(uid);
-                fetchProfile(uid);
-                loadUserAlerts(uid);
-                setUserEmail(session.user.email ?? '');
-                setUserMeta(session.user.user_metadata ?? null);
+                return;
             }
+            // Redirect new users (no profile_complete) to welcome flow
+            if (!session.user.user_metadata?.profile_complete) {
+                window.location.href = '/welcome.html';
+                return;
+            }
+            const uid = session.user.id;
+            setUserId(uid);
+            fetchProfile(uid);
+            loadUserAlerts(uid);
+            setUserEmail(session.user.email ?? '');
+            setUserMeta(session.user.user_metadata ?? null);
+        };
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            handleSession(session);
         });
-        // Use getUser() instead of getSession() on initial load: getSession()
-        // only reads localStorage and trusts a cached JWT, so a deleted/revoked
-        // user with a stale token still appears logged-in. getUser() round-trips
-        // to the auth server and returns null for invalidated tokens.
+        // Use getUser() for fresh metadata from the server (not cached JWT)
         supabase.auth.getUser().then(({ data: { user }, error }) => {
             if (error || !user) {
                 supabase.auth.signOut().catch(() => {});
                 window.location.href = '/index.html';
                 return;
             }
-            setUserId(user.id);
-            fetchProfile(user.id);
-            loadUserAlerts(user.id);
-            setUserEmail(user.email ?? '');
-            setUserMeta(user.user_metadata ?? null);
+            handleSession({ user });
         });
         return () => subscription.unsubscribe();
     }, []);
@@ -1079,7 +1081,7 @@ const App: React.FC = () => {
                                                             className={`text-5xl md:text-7xl font-display font-bold tracking-tight text-center ${theme === "light" ? "text-slate-900" : "text-white"}`}
                                                         >
                                                             Welcome back,{" "}
-                                                            <span className="text-blue-500">Chino</span>
+                                                            <span className="text-blue-500">{userMeta?.first_name?.trim() || 'there'}</span>
                                                         </h1>
                                                     </div>
                                                 )}
