@@ -181,22 +181,17 @@ function showProfileForm(userId: string): void {
                         <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8;">&#9662;</span>
                     </div>
                     <div style="position: relative;">
-                        <select id="pf-referral" style="
+                        <select id="pf-experience" style="
                             width: 100%; height: 48px; padding: 0 16px; border-radius: 10px;
                             border: 1px solid #475569; background: #0f172a; color: #fff;
                             font-size: 15px; font-family: 'Space Grotesk', sans-serif;
                             outline: none; transition: border-color 0.2s; box-sizing: border-box;
                             appearance: none; cursor: pointer;
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='#475569'">
-                            <option value="" disabled selected>How did you hear about us?</option>
-                            <option value="twitter">Twitter / X</option>
-                            <option value="instagram">Instagram</option>
-                            <option value="tiktok">TikTok</option>
-                            <option value="youtube">YouTube</option>
-                            <option value="friend">Friend / Word of mouth</option>
-                            <option value="google">Google search</option>
-                            <option value="reddit">Reddit</option>
-                            <option value="other">Other</option>
+                            <option value="" disabled selected>How experienced are you?</option>
+                            <option value="beginner">Beginner — still learning the basics</option>
+                            <option value="intermediate">Intermediate — trading for 1–3 years</option>
+                            <option value="experienced">Experienced — 3+ years, comfortable with indicators</option>
                         </select>
                         <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8;">&#9662;</span>
                     </div>
@@ -240,7 +235,7 @@ async function handleProfileSubmit(userId: string): Promise<void> {
     const firstName = (document.getElementById('pf-firstname') as HTMLInputElement).value.trim();
     const lastName = (document.getElementById('pf-lastname') as HTMLInputElement).value.trim();
     const trades = (document.getElementById('pf-trades') as HTMLSelectElement).value;
-    const referral = (document.getElementById('pf-referral') as HTMLSelectElement).value;
+    const experience = (document.getElementById('pf-experience') as HTMLSelectElement).value;
     const errorEl = document.getElementById('profile-error');
 
     // Hide previous errors
@@ -260,7 +255,7 @@ async function handleProfileSubmit(userId: string): Promise<void> {
             first_name: firstName,
             last_name: lastName,
             trades,
-            referral_source: referral,
+            experience_level: experience,
             profile_complete: true,
         }
     });
@@ -278,8 +273,9 @@ async function handleProfileSubmit(userId: string): Promise<void> {
         return;
     }
 
-    // Success — run morphing button animation then redirect
+    // Success — run morphing button animation, show welcome moment, then redirect
     await playSuccessAnimation();
+    await showWelcomeMoment(firstName);
     window.location.href = getDestination(userId);
 }
 
@@ -366,6 +362,36 @@ async function playSuccessAnimation(): Promise<void> {
 
     // Phase 4: Hold (0.4s)
     await wait(400);
+}
+
+async function showWelcomeMoment(firstName: string): Promise<void> {
+    const root = document.getElementById('welcome-root');
+    if (!root) return;
+
+    const displayName = firstName.trim() || 'there';
+
+    root.innerHTML = `
+        <div id="welcome-moment" style="
+            text-align: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        ">
+            <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #e2e8f0;">Welcome, ${displayName}.</h2>
+            <p style="font-size: 15px; color: #94a3b8;">Your dashboard is ready.</p>
+        </div>
+    `;
+
+    await wait(50); // allow DOM to settle before animating
+    requestAnimationFrame(() => {
+        const el = document.getElementById('welcome-moment');
+        if (el) {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }
+    });
+
+    await wait(1500);
 }
 
 init();

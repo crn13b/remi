@@ -106,7 +106,7 @@ function createModal(): HTMLDivElement {
                         </select>
                         <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:${dark ? '#94a3b8' : '#64748b'};">▾</span>
                     </div>
-                    <select id="auth-referral" style="
+                    <select id="auth-experience" style="
                         width:100%;height:48px;padding:0 16px;border-radius:10px;
                         border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                         background:${dark ? '#0f172a' : '#f8fafc'};
@@ -115,15 +115,10 @@ function createModal(): HTMLDivElement {
                         outline:none;transition:border-color 0.2s;box-sizing:border-box;
                         appearance:none;cursor:pointer;
                     " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'">
-                        <option value="" disabled selected>How did you hear about us?</option>
-                        <option value="twitter">Twitter / X</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="friend">Friend / Word of mouth</option>
-                        <option value="google">Google search</option>
-                        <option value="reddit">Reddit</option>
-                        <option value="other">Other</option>
+                        <option value="" disabled selected>How experienced are you?</option>
+                        <option value="beginner">Beginner — still learning the basics</option>
+                        <option value="intermediate">Intermediate — trading for 1–3 years</option>
+                        <option value="experienced">Experienced — 3+ years, comfortable with indicators</option>
                     </select>
                 </div>
 
@@ -364,7 +359,7 @@ async function handleSubmit(e: Event): Promise<void> {
             const firstName = (document.getElementById('auth-firstname') as HTMLInputElement)?.value.trim() ?? '';
             const lastName = (document.getElementById('auth-lastname') as HTMLInputElement)?.value.trim() ?? '';
             const trades = (document.getElementById('auth-trades') as HTMLSelectElement)?.value ?? '';
-            const referral = (document.getElementById('auth-referral') as HTMLSelectElement)?.value ?? '';
+            const experience = (document.getElementById('auth-experience') as HTMLSelectElement)?.value ?? '';
 
             const { error } = await supabase.auth.signUp({
                 email,
@@ -374,7 +369,7 @@ async function handleSubmit(e: Event): Promise<void> {
                         first_name: firstName,
                         last_name: lastName,
                         trades,
-                        referral_source: referral,
+                        experience_level: experience,
                         profile_complete: true,
                     }
                 }
