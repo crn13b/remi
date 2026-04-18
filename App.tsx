@@ -40,6 +40,7 @@ import * as alertService from "./services/alertService";
 import { updateNotificationPrefs } from "./services/meService";
 import { searchCatalog, searchGeckoTerminal, searchBinance, type CatalogEntry } from "./data/assetCatalog";
 import { useEntitlements } from "./hooks/useEntitlements";
+import { ToastViewport, showToast } from "./components/Toast";
 
 // ─── Watchlist Types ───
 import type { WatchlistGroup } from "./services/watchlistService";
@@ -229,12 +230,12 @@ const App: React.FC = () => {
     }, [userId]);
 
     // ─── Alert Handlers (Supabase-backed) ───
-    // Mutation errors (including tier-gate 402/403) are surfaced via window.alert
+    // Mutation errors (including tier-gate 402/403) are surfaced via toast
     // and optimistic UI state is rolled back to the pre-mutation snapshot.
     const reportMutationError = (action: string, err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`Failed to ${action}:`, err);
-        window.alert(`${action} failed: ${msg}`);
+        showToast({ type: 'error', message: `${action} failed: ${msg}` });
     };
 
     const handleCreateAlert = async (data: Omit<Alert, 'id' | 'user_id' | 'last_triggered_at' | 'last_score' | 'created_at'>) => {
@@ -411,7 +412,11 @@ const App: React.FC = () => {
     const addAssetToWatchlist = (asset: Asset) => {
         if (!activeWatchlistId) return;
         if (atTickerPerListCap) {
-            window.alert(`This watchlist is at its ${maxTickersPerWatchlist}-ticker limit. Upgrade to add more.`);
+            showToast({
+                type: 'warning',
+                message: `This watchlist is at its ${maxTickersPerWatchlist}-ticker limit.`,
+                action: { label: 'Upgrade to add more', href: '/pricing.html?reason=watchlist-ticker-cap' },
+            });
             return;
         }
         const listIdAtCall = activeWatchlistId;
@@ -443,7 +448,13 @@ const App: React.FC = () => {
                         ? {
                             ...wl, assets: wl.assets.map(a =>
                                 a.symbol === asset.symbol
-                                    ? { ...a, score: result.score, price: result.price, change: result.change, sentiment: result.sentiment }
+                                    ? {
+                                        ...a,
+                                        score: result.score,
+                                        price: result.price ?? a.price,
+                                        change: result.change ?? a.change,
+                                        sentiment: result.sentiment ?? a.sentiment,
+                                    }
                                     : a
                             )
                         }
@@ -493,7 +504,11 @@ const App: React.FC = () => {
     const createNewWatchlist = async () => {
         if (!userId) return;
         if (atWatchlistCap) {
-            window.alert(`You've reached your ${maxWatchlists}-watchlist limit. Upgrade for more.`);
+            showToast({
+                type: 'warning',
+                message: `You've reached your ${maxWatchlists}-watchlist limit.`,
+                action: { label: 'Upgrade for more', href: '/pricing.html?reason=watchlist-cap' },
+            });
             return;
         }
         const position = watchlists.length;
@@ -753,11 +768,11 @@ const App: React.FC = () => {
                     setLiveScore(result.score);
                     setSearchResult({
                         symbol: result.symbol,
-                        name: result.name,
-                        price: result.price,
-                        change: result.change,
-                        sentiment: result.score >= 70 ? "High Probability Setup" : result.sentiment,
-                        color: result.color,
+                        name: result.name ?? getDisplayName(result.symbol),
+                        price: result.price ?? "—",
+                        change: result.change ?? "—",
+                        sentiment: result.score >= 70 ? "High Probability Setup" : (result.sentiment ?? "Hold"),
+                        color: result.color ?? "slate-400",
                         score: result.score,
                     });
                 } else {
@@ -2111,8 +2126,7 @@ const App: React.FC = () => {
                 </div>
             </main>
 
-
-
+            <ToastViewport theme={theme} />
         </div>
     );
 };
