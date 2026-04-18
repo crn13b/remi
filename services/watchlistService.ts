@@ -83,7 +83,18 @@ export async function hydrateWatchlistScores(
     assets: wl.assets.map(a => {
       const r = results.get(a.symbol.toUpperCase());
       if (!r) return a;
-      return { ...a, score: r.score, price: r.price, change: r.change, sentiment: r.sentiment, color: r.color };
+      // Only overwrite fields the server actually returned. The cached-score
+      // path (free tier, fresh cache) returns a minimal { symbol, score } shape,
+      // so spreading r.price/r.change unconditionally would wipe the default
+      // "—" placeholder with undefined.
+      return {
+        ...a,
+        score: r.score,
+        price: r.price ?? a.price,
+        change: r.change ?? a.change,
+        sentiment: r.sentiment ?? a.sentiment,
+        color: r.color ?? a.color,
+      };
     }),
   }));
 

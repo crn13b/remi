@@ -164,15 +164,31 @@ const RemiScoreCard: React.FC<RemiScoreCardProps> = ({
         : (isDark ? neutralStyles.textGradient : neutralStyles.lightTextGradient);
     const activeBg = isCountDone ? finalStyles.bg : neutralStyles.bg;
 
-    const getCoinImage = (symbol: string) => {
+    const getCoinImage = (symbol: string): string | null => {
         const images: Record<string, string> = {
             BTC: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
             ETH: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
             SOL: "https://assets.coingecko.com/coins/images/4128/large/solana.png",
             PEPE: "https://assets.coingecko.com/coins/images/29850/large/pepe-token.jpeg",
+            XRP: "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png",
+            ADA: "https://assets.coingecko.com/coins/images/975/large/cardano.png",
+            DOGE: "https://assets.coingecko.com/coins/images/5/large/dogecoin.png",
+            AVAX: "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png",
+            LINK: "https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png",
+            DOT: "https://assets.coingecko.com/coins/images/12171/large/polkadot.png",
+            MATIC: "https://assets.coingecko.com/coins/images/4713/large/polygon.png",
+            UNI: "https://assets.coingecko.com/coins/images/12504/large/uniswap.png",
         };
-        return images[symbol] || images["BTC"];
+        return images[symbol] ?? null;
     };
+
+    const [logoFailed, setLogoFailed] = React.useState(false);
+    React.useEffect(() => {
+        setLogoFailed(false);
+    }, [asset.symbol]);
+    const logoSrc = getCoinImage(asset.symbol);
+    const showFallback = !logoSrc || logoFailed;
+    const fallbackInitial = asset.symbol.charAt(0).toUpperCase();
 
     return (
         /* Container max-width: narrow on mobile, wide on desktop */
@@ -277,14 +293,20 @@ const RemiScoreCard: React.FC<RemiScoreCardProps> = ({
                                         <div
                                             className={`absolute -inset-2 rounded-full bg-gradient-to-b ${activeBg} blur-md transition-all duration-700 ${isCountDone ? "opacity-80" : "opacity-30"}`}
                                         ></div>
-                                        <img
-                                            src={getCoinImage(asset.symbol)}
-                                            alt={asset.symbol}
-                                            className="relative w-16 h-16 rounded-full shadow-2xl"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = getCoinImage("BTC");
-                                            }}
-                                        />
+                                        {showFallback ? (
+                                            <div
+                                                className={`relative w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-2xl font-display font-bold ${isDark ? "bg-white/10 text-white" : "bg-slate-200 text-slate-700"}`}
+                                            >
+                                                {fallbackInitial}
+                                            </div>
+                                        ) : (
+                                            <img
+                                                src={logoSrc!}
+                                                alt={asset.symbol}
+                                                className="relative w-16 h-16 rounded-full shadow-2xl"
+                                                onError={() => setLogoFailed(true)}
+                                            />
+                                        )}
                                     </div>
                                     <h2
                                         className={`text-xl font-display font-bold ${isDark ? "text-white" : "text-slate-900"}`}
@@ -453,14 +475,20 @@ const RemiScoreCard: React.FC<RemiScoreCardProps> = ({
                                         <div
                                             className={`absolute -inset-1 rounded-full bg-gradient-to-b ${activeBg} blur-sm transition-all duration-700 ${isCountDone ? "opacity-80" : "opacity-30"}`}
                                         ></div>
-                                        <img
-                                            src={getCoinImage(asset.symbol)}
-                                            alt={asset.symbol}
-                                            className="relative w-14 h-14 lg:w-16 lg:h-16 rounded-full shadow-xl"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = getCoinImage("BTC");
-                                            }}
-                                        />
+                                        {showFallback ? (
+                                            <div
+                                                className={`relative w-14 h-14 lg:w-16 lg:h-16 rounded-full shadow-xl flex items-center justify-center text-xl lg:text-2xl font-display font-bold ${isDark ? "bg-white/10 text-white" : "bg-slate-200 text-slate-700"}`}
+                                            >
+                                                {fallbackInitial}
+                                            </div>
+                                        ) : (
+                                            <img
+                                                src={logoSrc!}
+                                                alt={asset.symbol}
+                                                className="relative w-14 h-14 lg:w-16 lg:h-16 rounded-full shadow-xl"
+                                                onError={() => setLogoFailed(true)}
+                                            />
+                                        )}
                                     </div>
                                     <div className="flex flex-col justify-center">
                                         <div className="flex items-baseline gap-2">
