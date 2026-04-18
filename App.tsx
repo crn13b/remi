@@ -161,26 +161,21 @@ const App: React.FC = () => {
     };
 
     useEffect(() => {
-        const handleSession = (session: { user: { id: string; email?: string; user_metadata?: Record<string, unknown> } } | null) => {
+        const handleUser = (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+            const uid = user.id;
+            setUserId(uid);
+            fetchProfile(uid);
+            loadUserAlerts(uid);
+            setUserEmail(user.email ?? '');
+            setUserMeta(user.user_metadata ?? null);
+        };
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (!session) {
                 window.location.href = '/index.html';
                 return;
             }
-            // Redirect new users (no profile_complete) to welcome flow
-            if (!session.user.user_metadata?.profile_complete) {
-                window.location.href = '/welcome.html';
-                return;
-            }
-            const uid = session.user.id;
-            setUserId(uid);
-            fetchProfile(uid);
-            loadUserAlerts(uid);
-            setUserEmail(session.user.email ?? '');
-            setUserMeta(session.user.user_metadata ?? null);
-        };
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            handleSession(session);
+            handleUser(session.user);
         });
         // Use getUser() for fresh metadata from the server (not cached JWT)
         supabase.auth.getUser().then(({ data: { user }, error }) => {
@@ -189,7 +184,7 @@ const App: React.FC = () => {
                 window.location.href = '/index.html';
                 return;
             }
-            handleSession({ user });
+            handleUser(user);
         });
         return () => subscription.unsubscribe();
     }, []);
@@ -1096,7 +1091,8 @@ const App: React.FC = () => {
                                                         </p>
                                                     </div>
 
-                                                    <div className="relative w-full max-w-3xl group">
+                                                    <div className="relative w-full max-w-3xl">
+                                                      <div className="relative group">
                                                         {/* Glow Effect */}
                                                         <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full opacity-20 group-hover:opacity-40 transition duration-500 blur-md"></div>
 
@@ -1145,6 +1141,7 @@ const App: React.FC = () => {
                                                                 <ArrowUp size={24} strokeWidth={2.5} />
                                                             </button>
                                                         </div>
+                                                      </div>
                                                         {dailyLookupLimit !== null && dailyLookupsRemaining !== null && (
                                                             <div className={`text-[10px] mt-2 text-center ${theme === "light" ? "text-slate-500" : "text-gray-400"}`}>
                                                                 Daily lookups remaining: {dailyLookupsRemaining}/{dailyLookupLimit}
@@ -1705,7 +1702,7 @@ const App: React.FC = () => {
                                                     </div>
                                                     <div className="grid grid-cols-3 gap-3">
                                                         {suggestions.slice(0, 6).map((asset) => {
-                                                            const isPos = asset.change.startsWith('+');
+                                                            const isPos = asset.change?.startsWith('+');
                                                             const logo = getLogo(asset.symbol);
                                                             return (
                                                                 <div
@@ -1758,9 +1755,9 @@ const App: React.FC = () => {
                                             const assets = activeWatchlist.assets;
                                             const getScore = (s: string) => ({ 'Strong Buy': 94, 'Buy': 78, 'Hold': 48, 'Sell': 24, 'Strong Sell': 12 }[s] ?? 50);
                                             const topAsset = assets.length > 0 ? [...assets].sort((a, b) => getScore(b.sentiment) - getScore(a.sentiment))[0] : null;
-                                            const buyCount = assets.filter(a => a.sentiment.includes('Buy')).length;
+                                            const buyCount = assets.filter(a => a.sentiment?.includes('Buy')).length;
                                             const holdCount = assets.filter(a => a.sentiment === 'Hold').length;
-                                            const sellCount = assets.filter(a => a.sentiment.includes('Sell')).length;
+                                            const sellCount = assets.filter(a => a.sentiment?.includes('Sell')).length;
                                             const total = assets.length || 1;
                                             const buyPct = Math.round((buyCount / total) * 100);
                                             const holdPct = Math.round((holdCount / total) * 100);
@@ -1932,7 +1929,7 @@ const App: React.FC = () => {
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {suggestions.map((asset) => {
                                                         const logo = getLogo(asset.symbol);
-                                                        const isPos = asset.change.startsWith('+');
+                                                        const isPos = asset.change?.startsWith('+');
                                                         return (
                                                             <div
                                                                 key={asset.symbol}

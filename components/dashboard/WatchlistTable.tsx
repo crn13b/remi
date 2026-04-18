@@ -96,7 +96,7 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
     }, [openMenu, showColumnSettings]);
 
     const getScore = (a: Asset) => a.score ?? ({ 'Strong Buy': 94, 'Buy': 78, 'Hold': 48, 'Sell': 24, 'Strong Sell': 12, 'High Probability Setup': 90 } as Record<string, number>)[a.sentiment] ?? 50;
-    const getSentimentColor = (s: string) => s.includes('Buy') ? 'text-green-500' : s.includes('Sell') ? 'text-red-500' : 'text-yellow-500';
+    const getSentimentColor = (s: string | undefined) => s?.includes('Buy') ? 'text-green-500' : s?.includes('Sell') ? 'text-red-500' : 'text-yellow-500';
     const getScoreColor = (n: number) => n >= 70 ? 'text-green-500' : n >= 40 ? 'text-yellow-500' : 'text-red-500';
 
     const getCryptoLogo = (symbol: string) => {
@@ -130,7 +130,7 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
         switch (sortKey) {
             case 'symbol': c = a.symbol.localeCompare(b.symbol); break;
             case 'score': c = getScore(a) - getScore(b); break;
-            case 'sentiment': c = a.sentiment.localeCompare(b.sentiment); break;
+            case 'sentiment': c = (a.sentiment ?? '').localeCompare(b.sentiment ?? ''); break;
             case 'price': c = parseNum(a.price) - parseNum(b.price); break;
             case 'change': c = parseNum(a.change) - parseNum(b.change); break;
         }
@@ -279,12 +279,12 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                         <AnimatedScore target={score} className={`text-xl font-bold ${getScoreColor(score)}`} />
                         <span className={`text-xs ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>/100</span>
                     </div>
-                    <div className={`text-[10px] font-bold uppercase mt-0.5 ${getSentimentColor(asset.sentiment)} score-reveal-fade`} style={{ animationDelay: '400ms' }}>{asset.sentiment}</div>
+                    <div className={`text-[10px] font-bold uppercase mt-0.5 ${getSentimentColor(asset.sentiment)} score-reveal-fade`} style={{ animationDelay: '400ms' }}>{asset.sentiment ?? '—'}</div>
                 </div>}
                 {/* Price */}
                 {visibleColumns.has('price') && <div className="score-reveal-fade" style={{ animationDelay: '600ms' }}><span className={`text-xs font-mono font-medium ${isLight ? 'text-slate-700' : 'text-white'}`}>{asset.price}</span></div>}
                 {/* Change */}
-                {visibleColumns.has('change') && <div className="score-reveal-fade" style={{ animationDelay: '650ms' }}><span className={`text-xs font-medium ${asset.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{asset.change}</span></div>}
+                {visibleColumns.has('change') && <div className="score-reveal-fade" style={{ animationDelay: '650ms' }}><span className={`text-xs font-medium ${asset.change?.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{asset.change ?? '—'}</span></div>}
 
                 {/* Overflow menu */}
                 <div className="relative" ref={openMenu === asset.symbol ? menuRef : undefined}>
@@ -312,7 +312,7 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
 
     const renderMobileCard = (asset: Asset) => {
         const score = getScore(asset);
-        const isPos = asset.change.startsWith('+');
+        const isPos = asset.change?.startsWith('+');
         const logo = getCryptoLogo(asset.symbol);
         const removing = removingSymbol === asset.symbol;
         const justAdded = recentlyAdded === asset.symbol;
@@ -337,8 +337,8 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                                 <span className={`text-[11px] ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>{asset.name}</span>
                             </div>
                             <div className="flex items-baseline gap-2 mt-1">
-                                <span className={`text-[11px] font-mono font-medium ${isLight ? 'text-slate-800' : 'text-white'}`}>{asset.price}</span>
-                                <span className={`text-[10px] font-medium ${isPos ? 'text-green-500' : 'text-red-500'}`}>{asset.change}</span>
+                                <span className={`text-[11px] font-mono font-medium ${isLight ? 'text-slate-800' : 'text-white'}`}>{asset.price ?? '—'}</span>
+                                <span className={`text-[10px] font-medium ${isPos ? 'text-green-500' : 'text-red-500'}`}>{asset.change ?? '—'}</span>
                             </div>
                         </div>
                     </div>
@@ -348,7 +348,7 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                                 <AnimatedScore target={score} className={`text-lg font-bold ${getScoreColor(score)}`} />
                                 <span className={`text-[10px] ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>/100</span>
                             </div>
-                            <div className={`text-[10px] font-bold uppercase mt-0.5 text-right score-reveal-fade ${getSentimentColor(asset.sentiment)}`} style={{ animationDelay: '400ms' }}>{asset.sentiment}</div>
+                            <div className={`text-[10px] font-bold uppercase mt-0.5 text-right score-reveal-fade ${getSentimentColor(asset.sentiment)}`} style={{ animationDelay: '400ms' }}>{asset.sentiment ?? '—'}</div>
                         </div>
                         {/* Overflow menu */}
                         <div className="relative" ref={openMenu === asset.symbol ? menuRef : undefined}>

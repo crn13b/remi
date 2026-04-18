@@ -23,24 +23,24 @@ function getDestination(userId: string): string {
 }
 
 async function init(): Promise<void> {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user }, error } = await supabase.auth.getUser();
 
     // No session — send to landing page
-    if (!session) {
+    if (error || !user) {
         window.location.href = '/index.html';
         return;
     }
 
-    const meta = session.user.user_metadata ?? {};
+    const meta = user.user_metadata ?? {};
 
     // Profile already complete — skip to dashboard
     if (meta.profile_complete === true) {
-        window.location.href = getDestination(session.user.id);
+        window.location.href = getDestination(user.id);
         return;
     }
 
     // New user — show welcome flow
-    showWelcomeScreen(session.user.id);
+    showWelcomeScreen(user.id);
 }
 
 function showWelcomeScreen(userId: string): void {
@@ -241,6 +241,15 @@ async function handleProfileSubmit(userId: string): Promise<void> {
     // Hide previous errors
     if (errorEl) errorEl.style.display = 'none';
 
+    // Validate required fields
+    if (!firstName || !lastName || !trades || !experience) {
+        if (errorEl) {
+            errorEl.textContent = 'All fields are required to set up your profile.';
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+
     // Disable submit button while request is in flight
     const submitBtn = document.getElementById('pf-submit') as HTMLButtonElement;
     if (submitBtn) {
@@ -370,17 +379,22 @@ async function showWelcomeMoment(firstName: string): Promise<void> {
 
     const displayName = firstName.trim() || 'there';
 
-    root.innerHTML = `
-        <div id="welcome-moment" style="
-            text-align: center;
-            opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-        ">
-            <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #e2e8f0;">Welcome, ${displayName}.</h2>
-            <p style="font-size: 15px; color: #94a3b8;">Your dashboard is ready.</p>
-        </div>
-    `;
+    const wrapper = document.createElement('div');
+    wrapper.id = 'welcome-moment';
+    wrapper.style.cssText = 'text-align: center; opacity: 0; transform: translateY(8px); transition: opacity 0.5s ease, transform 0.5s ease;';
+
+    const heading = document.createElement('h2');
+    heading.style.cssText = 'font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #e2e8f0;';
+    heading.textContent = `Welcome, ${displayName}.`;
+
+    const subtitle = document.createElement('p');
+    subtitle.style.cssText = 'font-size: 15px; color: #94a3b8;';
+    subtitle.textContent = 'Your dashboard is ready.';
+
+    wrapper.appendChild(heading);
+    wrapper.appendChild(subtitle);
+    root.innerHTML = '';
+    root.appendChild(wrapper);
 
     await wait(50); // allow DOM to settle before animating
     requestAnimationFrame(() => {
