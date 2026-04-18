@@ -23,6 +23,9 @@ out/
 ehthumbs.db
 Thumbs.db
 
+# Playwright session dumps (MCP browser tool)
+.playwright-mcp/
+
 # IDE/Editor
 .vscode/
 .idea/
