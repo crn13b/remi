@@ -23,6 +23,17 @@ function getDestination(userId: string): string {
 }
 
 async function init(): Promise<void> {
+    // If arriving from an email confirmation link, Supabase's detectSessionInUrl
+    // auto-exchanges the ?code= param. We detect it up front to show a "confirmed!"
+    // beat before the welcome/profile flow.
+    const justConfirmed = urlParams.has('code');
+
+    // If we arrived with a ?code=, wait briefly for the PKCE exchange to settle
+    // so getUser() sees the new session on the first try.
+    if (justConfirmed) {
+        await new Promise((r) => setTimeout(r, 400));
+    }
+
     const { data: { user }, error } = await supabase.auth.getUser();
 
     // No session — send to landing page
@@ -31,16 +42,76 @@ async function init(): Promise<void> {
         return;
     }
 
+    // Clean the ?code= out of the URL so refreshing doesn't retry the exchange
+    if (justConfirmed) {
+        const cleanUrl = window.location.pathname + (stripeRedirect ? '?stripe_redirect=' + encodeURIComponent(stripeRedirect) : '');
+        window.history.replaceState({}, '', cleanUrl);
+    }
+
     const meta = user.user_metadata ?? {};
 
-    // Profile already complete — skip to dashboard
+    // Profile already complete — skip to dashboard (still show confirm beat if just confirmed)
     if (meta.profile_complete === true) {
+        if (justConfirmed) {
+            await showConfirmedMoment();
+        }
         window.location.href = getDestination(user.id);
         return;
     }
 
-    // New user — show welcome flow
+    // New user — show confirmation success first, then welcome flow
+    if (justConfirmed) {
+        await showConfirmedMoment();
+    }
     showWelcomeScreen(user.id);
+}
+
+async function showConfirmedMoment(): Promise<void> {
+    const root = document.getElementById('welcome-root');
+    if (!root) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        padding: 40px 32px 32px;
+        text-align: center;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+    `;
+
+    wrapper.innerHTML = `
+        <div style="
+            width: 64px; height: 64px; border-radius: 50%;
+            background: #10b981; margin: 0 auto 20px;
+            display: flex; align-items: center; justify-content: center;
+        ">
+            <svg viewBox="0 0 28 28" style="width: 32px; height: 32px;">
+                <path d="M6 14.5 L11.5 20 L22 9" fill="none" stroke="#fff" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </div>
+        <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #e2e8f0;">Email confirmed!</h2>
+        <p style="font-size: 14px; color: #94a3b8;">You're all set. Let's finish setting up your account.</p>
+    `;
+
+    root.innerHTML = '';
+    root.appendChild(wrapper);
+
+    await wait(50);
+    requestAnimationFrame(() => {
+        wrapper.style.opacity = '1';
+        wrapper.style.transform = 'translateY(0)';
+    });
+
+    await wait(1600);
+
+    // Fade out before the next screen mounts
+    wrapper.style.opacity = '0';
+    wrapper.style.transform = 'translateY(-8px)';
+    await wait(400);
 }
 
 function showWelcomeScreen(userId: string): void {
@@ -152,13 +223,13 @@ function showProfileForm(userId: string): void {
 
                 <form id="profile-form" style="display: flex; flex-direction: column; gap: 12px;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <input id="pf-firstname" type="text" placeholder="First name" style="
+                        <input id="pf-firstname" type="text" placeholder="First name" required style="
                             width: 100%; height: 48px; padding: 0 16px; border-radius: 10px;
                             border: 1px solid #475569; background: #0f172a; color: #fff;
                             font-size: 15px; font-family: 'Space Grotesk', sans-serif;
                             outline: none; transition: border-color 0.2s; box-sizing: border-box;
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='#475569'" />
-                        <input id="pf-lastname" type="text" placeholder="Last name" style="
+                        <input id="pf-lastname" type="text" placeholder="Last name" required style="
                             width: 100%; height: 48px; padding: 0 16px; border-radius: 10px;
                             border: 1px solid #475569; background: #0f172a; color: #fff;
                             font-size: 15px; font-family: 'Space Grotesk', sans-serif;
@@ -166,7 +237,7 @@ function showProfileForm(userId: string): void {
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='#475569'" />
                     </div>
                     <div style="position: relative;">
-                        <select id="pf-trades" style="
+                        <select id="pf-trades" required style="
                             width: 100%; height: 48px; padding: 0 16px; border-radius: 10px;
                             border: 1px solid #475569; background: #0f172a; color: #fff;
                             font-size: 15px; font-family: 'Space Grotesk', sans-serif;
@@ -181,7 +252,7 @@ function showProfileForm(userId: string): void {
                         <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8;">&#9662;</span>
                     </div>
                     <div style="position: relative;">
-                        <select id="pf-experience" style="
+                        <select id="pf-experience" required style="
                             width: 100%; height: 48px; padding: 0 16px; border-radius: 10px;
                             border: 1px solid #475569; background: #0f172a; color: #fff;
                             font-size: 15px; font-family: 'Space Grotesk', sans-serif;
@@ -241,12 +312,20 @@ async function handleProfileSubmit(userId: string): Promise<void> {
     // Hide previous errors
     if (errorEl) errorEl.style.display = 'none';
 
-    // Validate required fields
-    if (!firstName || !lastName || !trades || !experience) {
+    // Validate required fields — focus the first empty one for quick keyboard recovery
+    const firstInvalid: [string, boolean][] = [
+        ['pf-firstname', !firstName],
+        ['pf-lastname', !lastName],
+        ['pf-trades', !trades],
+        ['pf-experience', !experience],
+    ];
+    const invalidId = firstInvalid.find(([, empty]) => empty)?.[0];
+    if (invalidId) {
         if (errorEl) {
             errorEl.textContent = 'All fields are required to set up your profile.';
             errorEl.style.display = 'block';
         }
+        (document.getElementById(invalidId) as HTMLElement | null)?.focus();
         return;
     }
 

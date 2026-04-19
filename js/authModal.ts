@@ -72,7 +72,7 @@ function createModal(): HTMLDivElement {
                 <!-- Signup-only fields -->
                 <div id="auth-signup-fields" style="display:none;flex-direction:column;gap:12px;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <input id="auth-firstname" type="text" placeholder="First name" style="
+                        <input id="auth-firstname" type="text" placeholder="First name" required style="
                             width:100%;height:48px;padding:0 16px;border-radius:10px;
                             border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                             background:${dark ? '#0f172a' : '#f8fafc'};
@@ -80,7 +80,7 @@ function createModal(): HTMLDivElement {
                             font-size:15px;font-family:'Space Grotesk',sans-serif;
                             outline:none;transition:border-color 0.2s;box-sizing:border-box;
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
-                        <input id="auth-lastname" type="text" placeholder="Last name" style="
+                        <input id="auth-lastname" type="text" placeholder="Last name" required style="
                             width:100%;height:48px;padding:0 16px;border-radius:10px;
                             border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                             background:${dark ? '#0f172a' : '#f8fafc'};
@@ -90,7 +90,7 @@ function createModal(): HTMLDivElement {
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
                     </div>
                     <div style="position:relative;">
-                        <select id="auth-trades" style="
+                        <select id="auth-trades" required style="
                             width:100%;height:48px;padding:0 16px;border-radius:10px;
                             border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                             background:${dark ? '#0f172a' : '#f8fafc'};
@@ -106,7 +106,7 @@ function createModal(): HTMLDivElement {
                         </select>
                         <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:${dark ? '#94a3b8' : '#64748b'};">▾</span>
                     </div>
-                    <select id="auth-experience" style="
+                    <select id="auth-experience" required style="
                         width:100%;height:48px;padding:0 16px;border-radius:10px;
                         border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                         background:${dark ? '#0f172a' : '#f8fafc'};
@@ -136,20 +136,46 @@ function createModal(): HTMLDivElement {
                     transition:border-color 0.2s;
                     box-sizing:border-box;
                 " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
-                <input id="auth-password" type="password" placeholder="Password" required minlength="6" style="
-                    width:100%;
-                    height:48px;
-                    padding:0 16px;
-                    border-radius:10px;
-                    border:1px solid ${dark ? '#475569' : '#e2e8f0'};
-                    background:${dark ? '#0f172a' : '#f8fafc'};
-                    color:${dark ? '#ffffff' : '#0f172a'};
-                    font-size:15px;
-                    font-family:'Space Grotesk',sans-serif;
-                    outline:none;
-                    transition:border-color 0.2s;
-                    box-sizing:border-box;
-                " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
+                <div style="position:relative;">
+                    <input id="auth-password" type="password" placeholder="Password" required style="
+                        width:100%;
+                        height:48px;
+                        padding:0 44px 0 16px;
+                        border-radius:10px;
+                        border:1px solid ${dark ? '#475569' : '#e2e8f0'};
+                        background:${dark ? '#0f172a' : '#f8fafc'};
+                        color:${dark ? '#ffffff' : '#0f172a'};
+                        font-size:15px;
+                        font-family:'Space Grotesk',sans-serif;
+                        outline:none;
+                        transition:border-color 0.2s;
+                        box-sizing:border-box;
+                    " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
+                    <button id="auth-password-toggle" type="button" aria-label="Show password" style="
+                        position:absolute;
+                        right:8px;
+                        top:50%;
+                        transform:translateY(-50%);
+                        background:none;
+                        border:none;
+                        padding:8px;
+                        cursor:pointer;
+                        color:${dark ? '#94a3b8' : '#64748b'};
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        border-radius:6px;
+                        transition:color 0.2s,background 0.2s;
+                    " onmouseover="this.style.color='${dark ? '#ffffff' : '#0f172a'}'" onmouseout="this.style.color='${dark ? '#94a3b8' : '#64748b'}'">
+                        <svg id="auth-password-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="auth-forgot" style="text-align:right;margin-top:-4px;">
+                    <a href="#" id="auth-forgot-link" style="font-size:12px;color:${dark ? '#94a3b8' : '#64748b'};text-decoration:none;">Forgot password?</a>
+                </div>
                 <button id="auth-submit" type="submit" style="
                     width:100%;
                     height:48px;
@@ -222,6 +248,48 @@ function createModal(): HTMLDivElement {
     // Social buttons
     document.getElementById('auth-google')!.addEventListener('click', handleGoogle);
 
+    // Forgot password
+    document.getElementById('auth-forgot-link')!.addEventListener('click', (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('auth-email') as HTMLInputElement).value.trim();
+        handlePasswordReset(email);
+    });
+
+    // Password visibility: press-and-hold to peek, release to hide
+    const EYE_OPEN = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    const EYE_OFF = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+
+    const setPasswordVisible = (visible: boolean): void => {
+        const input = document.getElementById('auth-password') as HTMLInputElement | null;
+        const eye = document.getElementById('auth-password-eye');
+        const btn = document.getElementById('auth-password-toggle');
+        if (!input || !eye || !btn) return;
+        input.type = visible ? 'text' : 'password';
+        btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+        eye.innerHTML = visible ? EYE_OFF : EYE_OPEN;
+    };
+
+    const toggleBtn = document.getElementById('auth-password-toggle')!;
+    let touchUsed = false;
+
+    // Mobile: tap to toggle on/off (no way to "hold")
+    toggleBtn.addEventListener('touchstart', (e) => {
+        touchUsed = true;
+        e.preventDefault();
+        const input = document.getElementById('auth-password') as HTMLInputElement | null;
+        setPasswordVisible(input?.type !== 'text');
+    }, { passive: false });
+
+    // Desktop: press-and-hold to peek, release to hide
+    toggleBtn.addEventListener('mousedown', (e) => {
+        if (touchUsed) return;
+        e.preventDefault();
+        setPasswordVisible(true);
+    });
+    const hideIfMouse = () => { if (!touchUsed) setPasswordVisible(false); };
+    toggleBtn.addEventListener('mouseup', hideIfMouse);
+    toggleBtn.addEventListener('mouseleave', hideIfMouse);
+
     // Toggle link
     document.getElementById('auth-toggle')!.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).tagName === 'A') {
@@ -253,18 +321,30 @@ function updateModalContent(): void {
 
     const signupFields = document.getElementById('auth-signup-fields');
 
+    // Toggle `required` on hidden signup fields so native validation doesn't
+    // block login submit (browsers refuse to submit with invalid hidden required fields)
+    const signupFieldIds = ['auth-firstname', 'auth-lastname', 'auth-trades', 'auth-experience'];
+    signupFieldIds.forEach((id) => {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+        if (el) el.required = currentMode === 'signup';
+    });
+
+    const forgot = document.getElementById('auth-forgot');
+
     if (currentMode === 'login') {
         heading.textContent = 'Welcome back';
         subheading.textContent = 'Sign in to your REMi account';
         submit.textContent = 'Sign In';
         toggle.innerHTML = `Don't have an account? <a href="#" style="color:${linkColor};font-weight:600;text-decoration:none;">Sign up</a>`;
         if (signupFields) signupFields.style.display = 'none';
+        if (forgot) forgot.style.display = 'block';
     } else {
         heading.textContent = 'Create your account';
         subheading.textContent = 'Start using REMi today';
         submit.textContent = 'Create Account';
         toggle.innerHTML = `Already have an account? <a href="#" style="color:${linkColor};font-weight:600;text-decoration:none;">Sign in</a>`;
         if (signupFields) signupFields.style.display = 'flex';
+        if (forgot) forgot.style.display = 'none';
     }
 }
 
@@ -298,11 +378,89 @@ function showEmailConfirmScreen(email: string): void {
     if (emailEl) emailEl.textContent = email;
 }
 
-function showError(message: string): void {
+function friendlyAuthError(raw: string): string {
+    const msg = raw.toLowerCase();
+    if (msg.includes('password should contain') || msg.includes('weak password')) {
+        return 'Password needs a mix of letters, numbers, and symbols.';
+    }
+    if (msg.includes('already registered') || msg.includes('already been registered')) {
+        return 'An account with this email already exists. Try signing in instead.';
+    }
+    if (msg.includes('invalid login credentials')) {
+        return 'Incorrect email or password.';
+    }
+    if (msg.includes('email not confirmed')) {
+        return 'Please confirm your email before signing in.';
+    }
+    if (msg.includes('email rate limit') || msg.includes('rate limit exceeded') || msg.includes('too many requests')) {
+        return "We've sent too many emails to this address recently. Please wait about an hour and try again, or use a different email.";
+    }
+    if (msg.includes('for security purposes') && msg.includes('seconds')) {
+        // Supabase throttle message: "For security purposes, you can only request this after X seconds"
+        return 'Please wait a moment before trying again.';
+    }
+    return raw;
+}
+
+interface ShowErrorOptions {
+    signupPrompt?: { email: string };
+    emailConfirmHint?: boolean;
+}
+
+function showError(message: string, options?: ShowErrorOptions): void {
     const error = document.getElementById('auth-error');
+    if (!error) return;
+    error.textContent = message;
+    if (options?.signupPrompt) {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin-top:8px;font-size:13px;';
+        row.appendChild(document.createTextNode("Don't have an account? "));
+        const link = document.createElement('a');
+        link.href = '#';
+        link.textContent = 'Sign up';
+        link.style.cssText = 'color:#135bec;font-weight:600;text-decoration:none;';
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentMode = 'signup';
+            updateModalContent();
+            const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
+            if (emailInput) emailInput.value = options.signupPrompt!.email;
+            (document.getElementById('auth-firstname') as HTMLElement | null)?.focus();
+        });
+        row.appendChild(link);
+        error.appendChild(row);
+    }
+    if (options?.emailConfirmHint) {
+        const hint = document.createElement('span');
+        hint.textContent = ' Check your inbox (and spam folder) for the confirmation link.';
+        hint.style.cssText = 'display:block;margin-top:4px;font-size:12px;opacity:0.85;';
+        error.appendChild(hint);
+    }
+    error.style.display = 'block';
+}
+
+async function handlePasswordReset(email: string): Promise<void> {
+    if (!email) {
+        showError('Enter your email first, then click "Reset it" again.');
+        (document.getElementById('auth-email') as HTMLElement | null)?.focus();
+        return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/welcome.html',
+    });
     if (error) {
-        error.textContent = message;
-        error.style.display = 'block';
+        showError(friendlyAuthError(error.message));
+        return;
+    }
+    // Replace error block with a success message
+    const errorEl = document.getElementById('auth-error');
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.background = '#0f2a1a';
+        errorEl.style.borderColor = '#134e35';
+        errorEl.style.color = '#6ee7b7';
+        errorEl.textContent = 'Password reset link sent. Check your email.';
+        errorEl.style.display = 'block';
     }
 }
 
@@ -329,12 +487,37 @@ async function handleSubmit(e: Event): Promise<void> {
     const email = (document.getElementById('auth-email') as HTMLInputElement).value.trim();
     const password = (document.getElementById('auth-password') as HTMLInputElement).value;
 
-    if (!email || !password) {
+    // Signup mode requires all profile fields too — same rules as welcome.html
+    if (currentMode === 'signup') {
+        const firstName = (document.getElementById('auth-firstname') as HTMLInputElement)?.value.trim() ?? '';
+        const lastName = (document.getElementById('auth-lastname') as HTMLInputElement)?.value.trim() ?? '';
+        const trades = (document.getElementById('auth-trades') as HTMLSelectElement)?.value ?? '';
+        const experience = (document.getElementById('auth-experience') as HTMLSelectElement)?.value ?? '';
+
+        const firstInvalid: [string, boolean][] = [
+            ['auth-firstname', !firstName],
+            ['auth-lastname', !lastName],
+            ['auth-trades', !trades],
+            ['auth-experience', !experience],
+            ['auth-email', !email],
+            ['auth-password', !password],
+        ];
+        const invalidId = firstInvalid.find(([, empty]) => empty)?.[0];
+        if (invalidId) {
+            showError('All fields are required to create your account.');
+            (document.getElementById(invalidId) as HTMLElement | null)?.focus();
+            return;
+        }
+    } else if (!email || !password) {
         showError('Please fill in all fields.');
+        (document.getElementById(!email ? 'auth-email' : 'auth-password') as HTMLElement | null)?.focus();
         return;
     }
-    if (password.length < 6) {
-        showError('Password must be at least 6 characters.');
+
+    // Password length check only applies on signup — existing accounts may predate the 8-char rule
+    if (currentMode === 'signup' && password.length < 8) {
+        showError('Password must be at least 8 characters.');
+        (document.getElementById('auth-password') as HTMLElement | null)?.focus();
         return;
     }
 
@@ -346,7 +529,22 @@ async function handleSubmit(e: Event): Promise<void> {
         if (currentMode === 'login') {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                showError(error.message);
+                const msg = error.message.toLowerCase();
+                const code = (error as { code?: string }).code?.toLowerCase() ?? '';
+
+                if (code === 'email_not_confirmed' || msg.includes('email not confirmed')) {
+                    showError('This account is waiting for email confirmation.', { emailConfirmHint: true });
+                    setLoading(false);
+                    return;
+                }
+
+                if (code === 'invalid_credentials' || msg.includes('invalid login credentials')) {
+                    showError("Email or password doesn't match.", { signupPrompt: { email } });
+                    setLoading(false);
+                    return;
+                }
+
+                showError(friendlyAuthError(error.message));
                 setLoading(false);
                 return;
             }
@@ -365,6 +563,7 @@ async function handleSubmit(e: Event): Promise<void> {
                 email,
                 password,
                 options: {
+                    emailRedirectTo: window.location.origin + '/welcome.html',
                     data: {
                         first_name: firstName,
                         last_name: lastName,
@@ -375,7 +574,7 @@ async function handleSubmit(e: Event): Promise<void> {
                 }
             });
             if (error) {
-                showError(error.message);
+                showError(friendlyAuthError(error.message));
                 setLoading(false);
                 return;
             }
@@ -399,7 +598,7 @@ async function handleGoogle(): Promise<void> {
         options: { redirectTo }
     });
     if (error) {
-        showError(error.message);
+        showError(friendlyAuthError(error.message));
         setLoading(false);
     }
 }
