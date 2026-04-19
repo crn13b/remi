@@ -13,7 +13,8 @@ export default defineConfig({
                 main: './dashboard.html',
                 index: './index.html',
                 pricing: './pricing.html',
-                welcome: './welcome.html'
+                welcome: './welcome.html',
+                resetPassword: './reset-password.html'
             }
         }
     }
