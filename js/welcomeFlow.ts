@@ -83,18 +83,29 @@ async function showConfirmedMoment(): Promise<void> {
     `;
 
     wrapper.innerHTML = `
-        <div style="
+        <div id="confirm-badge" style="
             width: 64px; height: 64px; border-radius: 50%;
             background: #10b981; margin: 0 auto 20px;
             display: flex; align-items: center; justify-content: center;
+            transform: scale(0);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
         ">
             <svg viewBox="0 0 28 28" style="width: 32px; height: 32px;">
-                <path d="M6 14.5 L11.5 20 L22 9" fill="none" stroke="#fff" stroke-width="3"
-                    stroke-linecap="round" stroke-linejoin="round" />
+                <path id="confirm-check" d="M6 14.5 L11.5 20 L22 9" fill="none" stroke="#fff" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    style="stroke-dasharray: 30; stroke-dashoffset: 30;" />
             </svg>
         </div>
-        <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #e2e8f0;">Email confirmed!</h2>
-        <p style="font-size: 14px; color: #94a3b8;">You're all set. Let's finish setting up your account.</p>
+        <h2 id="confirm-heading" style="
+            font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #e2e8f0;
+            opacity: 0; transform: translateY(4px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        ">Email confirmed!</h2>
+        <p id="confirm-sub" style="
+            font-size: 14px; color: #94a3b8;
+            opacity: 0; transform: translateY(4px);
+            transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+        ">You're all set. Let's finish setting up your account.</p>
     `;
 
     root.innerHTML = '';
@@ -105,8 +116,42 @@ async function showConfirmedMoment(): Promise<void> {
         wrapper.style.opacity = '1';
         wrapper.style.transform = 'translateY(0)';
     });
+    await wait(200);
 
-    await wait(1600);
+    // Badge bounces in
+    const badge = document.getElementById('confirm-badge');
+    if (badge) {
+        badge.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.6s ease-out';
+        badge.style.transform = 'scale(1)';
+        // Pulse ring
+        setTimeout(() => {
+            badge.style.boxShadow = '0 0 0 16px rgba(16, 185, 129, 0)';
+        }, 250);
+    }
+    await wait(300);
+
+    // Checkmark draws
+    const check = document.getElementById('confirm-check') as SVGPathElement | null;
+    if (check) {
+        check.style.transition = 'stroke-dashoffset 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        check.style.strokeDashoffset = '0';
+    }
+    await wait(250);
+
+    // Text fades up
+    const heading = document.getElementById('confirm-heading');
+    const sub = document.getElementById('confirm-sub');
+    if (heading) {
+        heading.style.opacity = '1';
+        heading.style.transform = 'translateY(0)';
+    }
+    if (sub) {
+        sub.style.opacity = '1';
+        sub.style.transform = 'translateY(0)';
+    }
+
+    // Hold the beat
+    await wait(1400);
 
     // Fade out before the next screen mounts
     wrapper.style.opacity = '0';
