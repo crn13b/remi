@@ -446,7 +446,7 @@ async function handlePasswordReset(email: string): Promise<void> {
         return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/welcome.html',
+        redirectTo: window.location.origin + '/reset-password.html',
     });
     if (error) {
         showError(friendlyAuthError(error.message));
