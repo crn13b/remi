@@ -136,20 +136,46 @@ function createModal(): HTMLDivElement {
                     transition:border-color 0.2s;
                     box-sizing:border-box;
                 " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
-                <input id="auth-password" type="password" placeholder="Password" required style="
-                    width:100%;
-                    height:48px;
-                    padding:0 16px;
-                    border-radius:10px;
-                    border:1px solid ${dark ? '#475569' : '#e2e8f0'};
-                    background:${dark ? '#0f172a' : '#f8fafc'};
-                    color:${dark ? '#ffffff' : '#0f172a'};
-                    font-size:15px;
-                    font-family:'Space Grotesk',sans-serif;
-                    outline:none;
-                    transition:border-color 0.2s;
-                    box-sizing:border-box;
-                " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
+                <div style="position:relative;">
+                    <input id="auth-password" type="password" placeholder="Password" required style="
+                        width:100%;
+                        height:48px;
+                        padding:0 44px 0 16px;
+                        border-radius:10px;
+                        border:1px solid ${dark ? '#475569' : '#e2e8f0'};
+                        background:${dark ? '#0f172a' : '#f8fafc'};
+                        color:${dark ? '#ffffff' : '#0f172a'};
+                        font-size:15px;
+                        font-family:'Space Grotesk',sans-serif;
+                        outline:none;
+                        transition:border-color 0.2s;
+                        box-sizing:border-box;
+                    " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
+                    <button id="auth-password-toggle" type="button" aria-label="Show password" style="
+                        position:absolute;
+                        right:8px;
+                        top:50%;
+                        transform:translateY(-50%);
+                        background:none;
+                        border:none;
+                        padding:8px;
+                        cursor:pointer;
+                        color:${dark ? '#94a3b8' : '#64748b'};
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        border-radius:6px;
+                        transition:color 0.2s,background 0.2s;
+                    " onmouseover="this.style.color='${dark ? '#ffffff' : '#0f172a'}'" onmouseout="this.style.color='${dark ? '#94a3b8' : '#64748b'}'">
+                        <svg id="auth-password-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="auth-forgot" style="text-align:right;margin-top:-4px;">
+                    <a href="#" id="auth-forgot-link" style="font-size:12px;color:${dark ? '#94a3b8' : '#64748b'};text-decoration:none;">Forgot password?</a>
+                </div>
                 <button id="auth-submit" type="submit" style="
                     width:100%;
                     height:48px;
@@ -222,6 +248,48 @@ function createModal(): HTMLDivElement {
     // Social buttons
     document.getElementById('auth-google')!.addEventListener('click', handleGoogle);
 
+    // Forgot password
+    document.getElementById('auth-forgot-link')!.addEventListener('click', (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('auth-email') as HTMLInputElement).value.trim();
+        handlePasswordReset(email);
+    });
+
+    // Password visibility: press-and-hold to peek, release to hide
+    const EYE_OPEN = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    const EYE_OFF = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+
+    const setPasswordVisible = (visible: boolean): void => {
+        const input = document.getElementById('auth-password') as HTMLInputElement | null;
+        const eye = document.getElementById('auth-password-eye');
+        const btn = document.getElementById('auth-password-toggle');
+        if (!input || !eye || !btn) return;
+        input.type = visible ? 'text' : 'password';
+        btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+        eye.innerHTML = visible ? EYE_OFF : EYE_OPEN;
+    };
+
+    const toggleBtn = document.getElementById('auth-password-toggle')!;
+    let touchUsed = false;
+
+    // Mobile: tap to toggle on/off (no way to "hold")
+    toggleBtn.addEventListener('touchstart', (e) => {
+        touchUsed = true;
+        e.preventDefault();
+        const input = document.getElementById('auth-password') as HTMLInputElement | null;
+        setPasswordVisible(input?.type !== 'text');
+    }, { passive: false });
+
+    // Desktop: press-and-hold to peek, release to hide
+    toggleBtn.addEventListener('mousedown', (e) => {
+        if (touchUsed) return;
+        e.preventDefault();
+        setPasswordVisible(true);
+    });
+    const hideIfMouse = () => { if (!touchUsed) setPasswordVisible(false); };
+    toggleBtn.addEventListener('mouseup', hideIfMouse);
+    toggleBtn.addEventListener('mouseleave', hideIfMouse);
+
     // Toggle link
     document.getElementById('auth-toggle')!.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).tagName === 'A') {
@@ -261,18 +329,22 @@ function updateModalContent(): void {
         if (el) el.required = currentMode === 'signup';
     });
 
+    const forgot = document.getElementById('auth-forgot');
+
     if (currentMode === 'login') {
         heading.textContent = 'Welcome back';
         subheading.textContent = 'Sign in to your REMi account';
         submit.textContent = 'Sign In';
         toggle.innerHTML = `Don't have an account? <a href="#" style="color:${linkColor};font-weight:600;text-decoration:none;">Sign up</a>`;
         if (signupFields) signupFields.style.display = 'none';
+        if (forgot) forgot.style.display = 'block';
     } else {
         heading.textContent = 'Create your account';
         subheading.textContent = 'Start using REMi today';
         submit.textContent = 'Create Account';
         toggle.innerHTML = `Already have an account? <a href="#" style="color:${linkColor};font-weight:600;text-decoration:none;">Sign in</a>`;
         if (signupFields) signupFields.style.display = 'flex';
+        if (forgot) forgot.style.display = 'none';
     }
 }
 
@@ -320,11 +392,18 @@ function friendlyAuthError(raw: string): string {
     if (msg.includes('email not confirmed')) {
         return 'Please confirm your email before signing in.';
     }
+    if (msg.includes('email rate limit') || msg.includes('rate limit exceeded') || msg.includes('too many requests')) {
+        return "We've sent too many emails to this address recently. Please wait about an hour and try again, or use a different email.";
+    }
+    if (msg.includes('for security purposes') && msg.includes('seconds')) {
+        // Supabase throttle message: "For security purposes, you can only request this after X seconds"
+        return 'Please wait a moment before trying again.';
+    }
     return raw;
 }
 
 interface ShowErrorOptions {
-    signupLink?: { email: string };
+    signupPrompt?: { email: string };
     emailConfirmHint?: boolean;
 }
 
@@ -332,21 +411,24 @@ function showError(message: string, options?: ShowErrorOptions): void {
     const error = document.getElementById('auth-error');
     if (!error) return;
     error.textContent = message;
-    if (options?.signupLink) {
+    if (options?.signupPrompt) {
+        const row = document.createElement('div');
+        row.style.cssText = 'margin-top:8px;font-size:13px;';
+        row.appendChild(document.createTextNode("Don't have an account? "));
         const link = document.createElement('a');
         link.href = '#';
-        link.textContent = 'Create an account with this email';
-        link.style.cssText = 'display:block;margin-top:8px;color:#135bec;font-weight:600;text-decoration:none;';
+        link.textContent = 'Sign up';
+        link.style.cssText = 'color:#135bec;font-weight:600;text-decoration:none;';
         link.addEventListener('click', (e) => {
             e.preventDefault();
             currentMode = 'signup';
             updateModalContent();
             const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
-            if (emailInput) emailInput.value = options.signupLink!.email;
+            if (emailInput) emailInput.value = options.signupPrompt!.email;
             (document.getElementById('auth-firstname') as HTMLElement | null)?.focus();
         });
-        error.appendChild(document.createElement('br'));
-        error.appendChild(link);
+        row.appendChild(link);
+        error.appendChild(row);
     }
     if (options?.emailConfirmHint) {
         const hint = document.createElement('span');
@@ -355,6 +437,31 @@ function showError(message: string, options?: ShowErrorOptions): void {
         error.appendChild(hint);
     }
     error.style.display = 'block';
+}
+
+async function handlePasswordReset(email: string): Promise<void> {
+    if (!email) {
+        showError('Enter your email first, then click "Reset it" again.');
+        (document.getElementById('auth-email') as HTMLElement | null)?.focus();
+        return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/welcome.html',
+    });
+    if (error) {
+        showError(friendlyAuthError(error.message));
+        return;
+    }
+    // Replace error block with a success message
+    const errorEl = document.getElementById('auth-error');
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.background = '#0f2a1a';
+        errorEl.style.borderColor = '#134e35';
+        errorEl.style.color = '#6ee7b7';
+        errorEl.textContent = 'Password reset link sent. Check your email.';
+        errorEl.style.display = 'block';
+    }
 }
 
 function setLoading(loading: boolean): void {
@@ -423,17 +530,21 @@ async function handleSubmit(e: Event): Promise<void> {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
                 const msg = error.message.toLowerCase();
-                // Supabase returns "Invalid login credentials" for BOTH wrong password
-                // and unconfirmed-email cases. Probe via resend to disambiguate:
-                // if the email belongs to an unconfirmed account, resend succeeds.
-                if (msg.includes('invalid login credentials')) {
-                    showError('Incorrect email or password. If you just signed up, check your email to confirm your account first.');
+                const code = (error as { code?: string }).code?.toLowerCase() ?? '';
+
+                if (code === 'email_not_confirmed' || msg.includes('email not confirmed')) {
+                    showError('This account is waiting for email confirmation.', { emailConfirmHint: true });
                     setLoading(false);
                     return;
                 }
-                const friendly = friendlyAuthError(error.message);
-                const showConfirmHint = msg.includes('email not confirmed');
-                showError(friendly, { emailConfirmHint: showConfirmHint });
+
+                if (code === 'invalid_credentials' || msg.includes('invalid login credentials')) {
+                    showError("Email or password doesn't match.", { signupPrompt: { email } });
+                    setLoading(false);
+                    return;
+                }
+
+                showError(friendlyAuthError(error.message));
                 setLoading(false);
                 return;
             }
@@ -487,7 +598,7 @@ async function handleGoogle(): Promise<void> {
         options: { redirectTo }
     });
     if (error) {
-        showError(error.message);
+        showError(friendlyAuthError(error.message));
         setLoading(false);
     }
 }
