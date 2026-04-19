@@ -72,7 +72,7 @@ function createModal(): HTMLDivElement {
                 <!-- Signup-only fields -->
                 <div id="auth-signup-fields" style="display:none;flex-direction:column;gap:12px;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <input id="auth-firstname" type="text" placeholder="First name" style="
+                        <input id="auth-firstname" type="text" placeholder="First name" required style="
                             width:100%;height:48px;padding:0 16px;border-radius:10px;
                             border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                             background:${dark ? '#0f172a' : '#f8fafc'};
@@ -80,7 +80,7 @@ function createModal(): HTMLDivElement {
                             font-size:15px;font-family:'Space Grotesk',sans-serif;
                             outline:none;transition:border-color 0.2s;box-sizing:border-box;
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
-                        <input id="auth-lastname" type="text" placeholder="Last name" style="
+                        <input id="auth-lastname" type="text" placeholder="Last name" required style="
                             width:100%;height:48px;padding:0 16px;border-radius:10px;
                             border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                             background:${dark ? '#0f172a' : '#f8fafc'};
@@ -90,7 +90,7 @@ function createModal(): HTMLDivElement {
                         " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
                     </div>
                     <div style="position:relative;">
-                        <select id="auth-trades" style="
+                        <select id="auth-trades" required style="
                             width:100%;height:48px;padding:0 16px;border-radius:10px;
                             border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                             background:${dark ? '#0f172a' : '#f8fafc'};
@@ -106,7 +106,7 @@ function createModal(): HTMLDivElement {
                         </select>
                         <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:${dark ? '#94a3b8' : '#64748b'};">▾</span>
                     </div>
-                    <select id="auth-experience" style="
+                    <select id="auth-experience" required style="
                         width:100%;height:48px;padding:0 16px;border-radius:10px;
                         border:1px solid ${dark ? '#475569' : '#e2e8f0'};
                         background:${dark ? '#0f172a' : '#f8fafc'};
@@ -136,7 +136,7 @@ function createModal(): HTMLDivElement {
                     transition:border-color 0.2s;
                     box-sizing:border-box;
                 " onfocus="this.style.borderColor='#135bec'" onblur="this.style.borderColor='${dark ? '#475569' : '#e2e8f0'}'" />
-                <input id="auth-password" type="password" placeholder="Password" required minlength="6" style="
+                <input id="auth-password" type="password" placeholder="Password" required style="
                     width:100%;
                     height:48px;
                     padding:0 16px;
@@ -253,6 +253,14 @@ function updateModalContent(): void {
 
     const signupFields = document.getElementById('auth-signup-fields');
 
+    // Toggle `required` on hidden signup fields so native validation doesn't
+    // block login submit (browsers refuse to submit with invalid hidden required fields)
+    const signupFieldIds = ['auth-firstname', 'auth-lastname', 'auth-trades', 'auth-experience'];
+    signupFieldIds.forEach((id) => {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+        if (el) el.required = currentMode === 'signup';
+    });
+
     if (currentMode === 'login') {
         heading.textContent = 'Welcome back';
         subheading.textContent = 'Sign in to your REMi account';
@@ -298,12 +306,55 @@ function showEmailConfirmScreen(email: string): void {
     if (emailEl) emailEl.textContent = email;
 }
 
-function showError(message: string): void {
-    const error = document.getElementById('auth-error');
-    if (error) {
-        error.textContent = message;
-        error.style.display = 'block';
+function friendlyAuthError(raw: string): string {
+    const msg = raw.toLowerCase();
+    if (msg.includes('password should contain') || msg.includes('weak password')) {
+        return 'Password needs a mix of letters, numbers, and symbols.';
     }
+    if (msg.includes('already registered') || msg.includes('already been registered')) {
+        return 'An account with this email already exists. Try signing in instead.';
+    }
+    if (msg.includes('invalid login credentials')) {
+        return 'Incorrect email or password.';
+    }
+    if (msg.includes('email not confirmed')) {
+        return 'Please confirm your email before signing in.';
+    }
+    return raw;
+}
+
+interface ShowErrorOptions {
+    signupLink?: { email: string };
+    emailConfirmHint?: boolean;
+}
+
+function showError(message: string, options?: ShowErrorOptions): void {
+    const error = document.getElementById('auth-error');
+    if (!error) return;
+    error.textContent = message;
+    if (options?.signupLink) {
+        const link = document.createElement('a');
+        link.href = '#';
+        link.textContent = 'Create an account with this email';
+        link.style.cssText = 'display:block;margin-top:8px;color:#135bec;font-weight:600;text-decoration:none;';
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentMode = 'signup';
+            updateModalContent();
+            const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
+            if (emailInput) emailInput.value = options.signupLink!.email;
+            (document.getElementById('auth-firstname') as HTMLElement | null)?.focus();
+        });
+        error.appendChild(document.createElement('br'));
+        error.appendChild(link);
+    }
+    if (options?.emailConfirmHint) {
+        const hint = document.createElement('span');
+        hint.textContent = ' Check your inbox (and spam folder) for the confirmation link.';
+        hint.style.cssText = 'display:block;margin-top:4px;font-size:12px;opacity:0.85;';
+        error.appendChild(hint);
+    }
+    error.style.display = 'block';
 }
 
 function setLoading(loading: boolean): void {
@@ -329,12 +380,37 @@ async function handleSubmit(e: Event): Promise<void> {
     const email = (document.getElementById('auth-email') as HTMLInputElement).value.trim();
     const password = (document.getElementById('auth-password') as HTMLInputElement).value;
 
-    if (!email || !password) {
+    // Signup mode requires all profile fields too — same rules as welcome.html
+    if (currentMode === 'signup') {
+        const firstName = (document.getElementById('auth-firstname') as HTMLInputElement)?.value.trim() ?? '';
+        const lastName = (document.getElementById('auth-lastname') as HTMLInputElement)?.value.trim() ?? '';
+        const trades = (document.getElementById('auth-trades') as HTMLSelectElement)?.value ?? '';
+        const experience = (document.getElementById('auth-experience') as HTMLSelectElement)?.value ?? '';
+
+        const firstInvalid: [string, boolean][] = [
+            ['auth-firstname', !firstName],
+            ['auth-lastname', !lastName],
+            ['auth-trades', !trades],
+            ['auth-experience', !experience],
+            ['auth-email', !email],
+            ['auth-password', !password],
+        ];
+        const invalidId = firstInvalid.find(([, empty]) => empty)?.[0];
+        if (invalidId) {
+            showError('All fields are required to create your account.');
+            (document.getElementById(invalidId) as HTMLElement | null)?.focus();
+            return;
+        }
+    } else if (!email || !password) {
         showError('Please fill in all fields.');
+        (document.getElementById(!email ? 'auth-email' : 'auth-password') as HTMLElement | null)?.focus();
         return;
     }
-    if (password.length < 6) {
-        showError('Password must be at least 6 characters.');
+
+    // Password length check only applies on signup — existing accounts may predate the 8-char rule
+    if (currentMode === 'signup' && password.length < 8) {
+        showError('Password must be at least 8 characters.');
+        (document.getElementById('auth-password') as HTMLElement | null)?.focus();
         return;
     }
 
@@ -346,7 +422,18 @@ async function handleSubmit(e: Event): Promise<void> {
         if (currentMode === 'login') {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                showError(error.message);
+                const msg = error.message.toLowerCase();
+                // Supabase returns "Invalid login credentials" for BOTH wrong password
+                // and unconfirmed-email cases. Probe via resend to disambiguate:
+                // if the email belongs to an unconfirmed account, resend succeeds.
+                if (msg.includes('invalid login credentials')) {
+                    showError('Incorrect email or password. If you just signed up, check your email to confirm your account first.');
+                    setLoading(false);
+                    return;
+                }
+                const friendly = friendlyAuthError(error.message);
+                const showConfirmHint = msg.includes('email not confirmed');
+                showError(friendly, { emailConfirmHint: showConfirmHint });
                 setLoading(false);
                 return;
             }
@@ -365,6 +452,7 @@ async function handleSubmit(e: Event): Promise<void> {
                 email,
                 password,
                 options: {
+                    emailRedirectTo: window.location.origin + '/welcome.html',
                     data: {
                         first_name: firstName,
                         last_name: lastName,
@@ -375,7 +463,7 @@ async function handleSubmit(e: Event): Promise<void> {
                 }
             });
             if (error) {
-                showError(error.message);
+                showError(friendlyAuthError(error.message));
                 setLoading(false);
                 return;
             }
