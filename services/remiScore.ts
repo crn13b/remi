@@ -38,8 +38,17 @@ export interface FounderDetail {
 }
 
 interface ScoreApiError {
-  code: "invalid_symbol" | "fetch_failed";
+  code: "invalid_symbol" | "fetch_failed" | "RATE_LIMITED" | "LOOKUP_DENIED" | string;
   message: string;
+}
+
+export class ScoreFetchError extends Error {
+  code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+    this.name = "ScoreFetchError";
+  }
 }
 
 interface ScoreApiResponse {
@@ -101,12 +110,12 @@ export async function getRemiScore(symbol: string): Promise<RemiScoreResult> {
   const symError = response.errors?.[sym];
   if (symError) {
     if (symError.code === "invalid_symbol") validatedSymbols.set(sym, false);
-    throw new Error(symError.message);
+    throw new ScoreFetchError(symError.code, symError.message);
   }
 
   const result = response.results[sym];
   if (!result) {
-    throw new Error(`No score returned for ${sym}`);
+    throw new ScoreFetchError("no_result", `No score returned for ${sym}`);
   }
 
   validatedSymbols.set(sym, true);

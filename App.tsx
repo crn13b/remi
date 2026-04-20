@@ -27,7 +27,7 @@ import {
     Terminal,
 } from "lucide-react";
 import { ViewType, Asset } from "./types";
-import { getRemiScore, isSupported, getDisplayName, type RemiScoreResult } from "./services/remiScore";
+import { getRemiScore, isSupported, getDisplayName, ScoreFetchError, type RemiScoreResult } from "./services/remiScore";
 import * as watchlistService from "./services/watchlistService";
 import { supabase } from "./services/supabaseClient";
 import WatchlistTable from "./components/dashboard/WatchlistTable";
@@ -444,7 +444,7 @@ const App: React.FC = () => {
         if (!asset.score && isSupported(asset.symbol)) {
             getRemiScore(asset.symbol).then((result) => {
                 setWatchlists(prev => prev.map(wl =>
-                    wl.id === activeWatchlistId
+                    wl.id === listIdAtCall
                         ? {
                             ...wl, assets: wl.assets.map(a =>
                                 a.symbol === asset.symbol
@@ -465,12 +465,38 @@ const App: React.FC = () => {
                     next.delete(asset.symbol);
                     return next;
                 });
-            }).catch(() => {
+            }).catch((err) => {
+                // Score fetch failed. Mark the row with a placeholder score so
+                // it stops looking like a forever-loading skeleton, and tell
+                // the user why via toast.
+                setWatchlists(prev => prev.map(wl =>
+                    wl.id === listIdAtCall
+                        ? {
+                            ...wl, assets: wl.assets.map(a =>
+                                a.symbol === asset.symbol && a.score === undefined
+                                    ? { ...a, score: -1 }
+                                    : a
+                            )
+                        }
+                        : wl
+                ));
                 setLoadingSymbols(prev => {
                     const next = new Set(prev);
                     next.delete(asset.symbol);
                     return next;
                 });
+                if (err instanceof ScoreFetchError && err.code === 'RATE_LIMITED') {
+                    showToast({
+                        type: 'warning',
+                        message: "You've hit your daily score lookup limit.",
+                        action: { label: 'Upgrade for unlimited', href: '/pricing.html?reason=daily-score-cap' },
+                    });
+                } else {
+                    showToast({
+                        type: 'error',
+                        message: `Couldn't fetch score for ${asset.symbol}. Try again in a moment.`,
+                    });
+                }
             });
         } else {
             setTimeout(() => {
@@ -584,7 +610,7 @@ const App: React.FC = () => {
 
     const isIntroSequence =
         currentView === ViewType.SEARCH &&
-        (remiScanState === "intro" || remiScanState === "welcome");
+        remiScanState === "intro";
 
     useEffect(() => {
         if (currentView === ViewType.SEARCH) {
@@ -606,16 +632,14 @@ const App: React.FC = () => {
             setSearchQuery("");
             setSearchResult(null);
 
-            // Sequence: Intro (6s total) -> Welcome (rotate in) -> Idle (search bar fade in)
-            const timer1 = setTimeout(() => setRemiScanState("welcome"), 6000);
-            const timer2 = setTimeout(() => {
+            // Sequence: Intro (6s) -> Idle (heading + search bar fade in together, no reflow)
+            const timer1 = setTimeout(() => {
                 setRemiScanState("idle");
                 hasPlayedIntro.current = true;
-            }, 7000);
+            }, 6000);
 
             return () => {
                 clearTimeout(timer1);
-                clearTimeout(timer2);
             };
         }
     }, [currentView]);
@@ -1666,7 +1690,7 @@ const App: React.FC = () => {
                                 {/* ─── Two-Column Layout: Table + Sidebar ─── */}
                                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
                                     {/* Left: Table */}
-                                    <div className={`rounded-2xl overflow-hidden flex flex-col ${theme === "light" ? "bg-white shadow-md" : baseTileClasses}`}>
+                                    <div className={`rounded-2xl flex flex-col ${theme === "light" ? "bg-white shadow-md" : baseTileClasses}`}>
                                         <div>
                                             <WatchlistTable
                                                 assets={activeWatchlist.assets}

@@ -71,22 +71,21 @@ export async function loadWatchlists(userId: string): Promise<WatchlistGroup[]> 
 
 export async function hydrateWatchlistScores(
   watchlists: WatchlistGroup[],
-  onUpdate: (updated: WatchlistGroup[]) => void,
+  setWatchlists: (updater: (prev: WatchlistGroup[]) => WatchlistGroup[]) => void,
 ): Promise<void> {
   const allSymbols = [...new Set(watchlists.flatMap(wl => wl.assets.map(a => a.symbol)))];
   if (allSymbols.length === 0) return;
 
   const results = await getBatchScores(allSymbols);
 
-  const updated = watchlists.map(wl => ({
+  // Functional update so we merge into whatever the latest state is,
+  // not a stale snapshot — avoids races with StrictMode double-mount and
+  // any other concurrent loads.
+  setWatchlists((prev) => prev.map(wl => ({
     ...wl,
     assets: wl.assets.map(a => {
       const r = results.get(a.symbol.toUpperCase());
       if (!r) return a;
-      // Only overwrite fields the server actually returned. The cached-score
-      // path (free tier, fresh cache) returns a minimal { symbol, score } shape,
-      // so spreading r.price/r.change unconditionally would wipe the default
-      // "—" placeholder with undefined.
       return {
         ...a,
         score: r.score,
@@ -96,9 +95,7 @@ export async function hydrateWatchlistScores(
         color: r.color ?? a.color,
       };
     }),
-  }));
-
-  onUpdate(updated);
+  })));
 }
 
 // ─── Create watchlist ───
