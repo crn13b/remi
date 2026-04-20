@@ -1,7 +1,63 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Asset } from '../../types';
 import { ArrowUp, ArrowDown, MoreHorizontal, Bell, Trash2, List, Settings, Eye, EyeOff } from 'lucide-react';
 import { useEntitlements } from '../../hooks/useEntitlements';
+
+/* ─── RowMenu: renders via portal to escape table's clipping/stacking contexts ─── */
+interface RowMenuProps {
+    anchorEl: HTMLElement | null;
+    isLight: boolean;
+    onSetAlert: () => void;
+    onRemove: () => void;
+    onClose: () => void;
+}
+
+const RowMenu: React.FC<RowMenuProps> = ({ anchorEl, isLight, onSetAlert, onRemove, onClose }) => {
+    const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!anchorEl) return;
+        const r = anchorEl.getBoundingClientRect();
+        setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }, [anchorEl]);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node) && anchorEl && !anchorEl.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [anchorEl, onClose]);
+
+    if (!pos) return null;
+
+    return createPortal(
+        <div
+            ref={menuRef}
+            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999 }}
+            className={`w-48 py-1 rounded-xl overflow-hidden border shadow-2xl ${isLight ? 'bg-white border-slate-200' : 'bg-[#1a1a2e] border-white/10'}`}
+        >
+            <button
+                onClick={(e) => { e.stopPropagation(); onSetAlert(); onClose(); }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${isLight ? 'text-slate-600 hover:bg-slate-50' : 'text-gray-300 hover:bg-white/5'}`}
+            >
+                <Bell size={14} className="text-yellow-500" /> Set Alert
+            </button>
+            <div className={`mx-3 my-1 border-t ${isLight ? 'border-slate-100' : 'border-white/5'}`} />
+            <button
+                onClick={(e) => { e.stopPropagation(); onRemove(); onClose(); }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${isLight ? 'text-slate-900 hover:bg-slate-100' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+            >
+                <Trash2 size={14} /> Remove
+            </button>
+        </div>,
+        document.body,
+    );
+};
 
 /* ─── Animated Score: rolls up from 0 to target ─── */
 const AnimatedScore: React.FC<{ target: number; duration?: number; className?: string }> = ({ target, duration = 800, className = '' }) => {
@@ -53,10 +109,10 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
     const [sortKey, setSortKey] = useState<SortKey | null>(null);
     const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [openMenu, setOpenMenu] = useState<string | null>(null);
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
     const [removingSymbol, setRemovingSymbol] = useState<string | null>(null);
     const [showColumnSettings, setShowColumnSettings] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['score', 'price', 'change']));
-    const menuRef = useRef<HTMLDivElement>(null);
     const colSettingsRef = useRef<HTMLDivElement>(null);
 
     const COLUMN_OPTIONS = [
@@ -88,14 +144,15 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenu(null);
             if (colSettingsRef.current && !colSettingsRef.current.contains(e.target as Node)) setShowColumnSettings(false);
         };
-        if (openMenu || showColumnSettings) document.addEventListener('mousedown', handler);
+        if (showColumnSettings) document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
-    }, [openMenu, showColumnSettings]);
+    }, [showColumnSettings]);
 
-    const getScore = (a: Asset) => a.score ?? ({ 'Strong Buy': 94, 'Buy': 78, 'Hold': 48, 'Sell': 24, 'Strong Sell': 12, 'High Probability Setup': 90 } as Record<string, number>)[a.sentiment] ?? 50;
+    const hasScore = (a: Asset) => typeof a.score === 'number';
+    const isScoreUnavailable = (a: Asset) => a.score === -1;
+    const getScore = (a: Asset): number => a.score as number;
     const getSentimentColor = (s: string | undefined) => s?.includes('Buy') ? 'text-green-500' : s?.includes('Sell') ? 'text-red-500' : 'text-yellow-500';
     const getScoreColor = (n: number) => n >= 70 ? 'text-green-500' : n >= 40 ? 'text-yellow-500' : 'text-red-500';
 
@@ -129,7 +186,14 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
         let c = 0;
         switch (sortKey) {
             case 'symbol': c = a.symbol.localeCompare(b.symbol); break;
-            case 'score': c = getScore(a) - getScore(b); break;
+            case 'score': {
+                // Sort unscored rows to the bottom regardless of direction
+                if (!hasScore(a) && !hasScore(b)) c = 0;
+                else if (!hasScore(a)) return 1;
+                else if (!hasScore(b)) return -1;
+                else c = getScore(a) - getScore(b);
+                break;
+            }
             case 'sentiment': c = (a.sentiment ?? '').localeCompare(b.sentiment ?? ''); break;
             case 'price': c = parseNum(a.price) - parseNum(b.price); break;
             case 'change': c = parseNum(a.change) - parseNum(b.change); break;
@@ -140,7 +204,8 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
     const handleRemove = (symbol: string) => {
         setRemovingSymbol(symbol);
         setOpenMenu(null);
-        setTimeout(() => { onRemove?.(symbol); setRemovingSymbol(null); }, 400);
+        setMenuAnchor(null);
+        setTimeout(() => { onRemove?.(symbol); setRemovingSymbol(null); }, 450);
     };
 
     const SortHead = ({ label, k, align = 'left' }: { label: string; k: SortKey; align?: string }) => {
@@ -254,14 +319,24 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
         const removing = removingSymbol === asset.symbol;
         const justAdded = recentlyAdded === asset.symbol;
 
+        const menuOpen = openMenu === asset.symbol;
         return (
             <div
                 key={asset.symbol}
-                className={`group relative grid gap-5 items-center px-6 py-5 border-b transition-all
-                    ${removing ? 'opacity-0 -translate-x-8 max-h-0 py-0 overflow-hidden' : 'opacity-100 translate-x-0 max-h-28'}
+                className={`group relative grid gap-5 items-center px-6 border-b
+                    ${menuOpen ? 'z-40' : 'z-0'}
                     ${justAdded ? 'animate-in fade-in slide-in-from-left-4 duration-500' : ''}
                     ${isLight ? 'border-slate-100 hover:bg-slate-50' : 'border-white/[0.03] hover:bg-white/[0.02]'}`}
-                style={{ ...gridStyle, transitionDuration: removing ? '400ms' : '300ms', transitionTimingFunction: 'cubic-bezier(.4,0,.2,1)' }}
+                style={{
+                    ...gridStyle,
+                    opacity: removing ? 0 : 1,
+                    transform: removing ? 'translateX(-32px)' : 'translateX(0)',
+                    maxHeight: removing ? '0px' : '120px',
+                    paddingTop: removing ? '0px' : '20px',
+                    paddingBottom: removing ? '0px' : '20px',
+                    overflow: 'hidden',
+                    transition: 'opacity 200ms ease-out, transform 300ms cubic-bezier(.4,0,.2,1), max-height 350ms cubic-bezier(.4,0,.2,1) 100ms, padding 350ms cubic-bezier(.4,0,.2,1) 100ms',
+                }}
             >
                 {/* Asset */}
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onAnalyze?.(asset)}>
@@ -276,8 +351,14 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                 {/* Score + Signal */}
                 {visibleColumns.has('score') && <div className="flex flex-col items-start justify-center">
                     <div className="flex items-baseline gap-0.5">
-                        <AnimatedScore target={score} className={`text-xl font-bold ${getScoreColor(score)}`} />
-                        <span className={`text-xs ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>/100</span>
+                        {isScoreUnavailable(asset) ? (
+                            <span className={`text-xl font-bold ${isLight ? 'text-slate-400' : 'text-gray-500'}`}>—</span>
+                        ) : (
+                            <>
+                                <AnimatedScore target={score} className={`text-xl font-bold ${getScoreColor(score)}`} />
+                                <span className={`text-xs ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>/100</span>
+                            </>
+                        )}
                     </div>
                     <div className={`text-[10px] font-bold uppercase mt-0.5 ${getSentimentColor(asset.sentiment)} score-reveal-fade`} style={{ animationDelay: '400ms' }}>{asset.sentiment ?? '—'}</div>
                 </div>}
@@ -286,26 +367,22 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                 {/* Change */}
                 {visibleColumns.has('change') && <div className="score-reveal-fade" style={{ animationDelay: '650ms' }}><span className={`text-xs font-medium ${asset.change?.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>{asset.change ?? '—'}</span></div>}
 
-                {/* Overflow menu */}
-                <div className="relative" ref={openMenu === asset.symbol ? menuRef : undefined}>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === asset.symbol ? null : asset.symbol); }}
-                        className={`p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 ${isLight ? 'hover:bg-slate-100 text-slate-900' : 'hover:bg-white/10 text-gray-500'}`}
-                    >
-                        <MoreHorizontal size={16} />
-                    </button>
-                    {openMenu === asset.symbol && (
-                        <div className={`absolute right-0 top-8 z-50 w-48 py-1 rounded-xl overflow-hidden border shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${isLight ? 'bg-white border-slate-200' : 'bg-[#1a1a2e] border-white/10'}`}>
-                            <button onClick={() => { onSetAlert?.(asset); setOpenMenu(null); }} className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${isLight ? 'text-slate-600 hover:bg-slate-50' : 'text-gray-300 hover:bg-white/5'}`}>
-                                <Bell size={14} className="text-yellow-500" /> Set Alert
-                            </button>
-                            <div className={`mx-3 my-1 border-t ${isLight ? 'border-slate-100' : 'border-white/5'}`} />
-                            <button onClick={() => handleRemove(asset.symbol)} className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${isLight ? 'text-slate-900 hover:text-slate-900 hover:bg-slate-100' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                <Trash2 size={14} /> Remove
-                            </button>
-                        </div>
-                    )}
-                </div>
+                {/* Overflow menu trigger (popup renders via portal outside table) */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (openMenu === asset.symbol) {
+                            setOpenMenu(null);
+                            setMenuAnchor(null);
+                        } else {
+                            setOpenMenu(asset.symbol);
+                            setMenuAnchor(e.currentTarget);
+                        }
+                    }}
+                    className={`p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 ${isLight ? 'hover:bg-slate-100 text-slate-900' : 'hover:bg-white/10 text-gray-500'}`}
+                >
+                    <MoreHorizontal size={16} />
+                </button>
             </div>
         );
     };
@@ -316,11 +393,13 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
         const logo = getCryptoLogo(asset.symbol);
         const removing = removingSymbol === asset.symbol;
         const justAdded = recentlyAdded === asset.symbol;
+        const menuOpen = openMenu === asset.symbol;
 
         return (
             <div
                 key={asset.symbol}
                 className={`relative rounded-2xl p-4 border transition-all
+                    ${menuOpen ? 'z-40' : 'z-0'}
                     ${removing ? 'opacity-0 -translate-x-8 max-h-0 p-0 overflow-hidden' : 'opacity-100'}
                     ${justAdded ? 'animate-in fade-in slide-in-from-bottom-2 duration-500' : ''}
                     ${isLight ? 'bg-white border-slate-100 shadow-sm' : 'bg-white/[0.03] border-white/5'}`}
@@ -350,34 +429,41 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                             </div>
                             <div className={`text-[10px] font-bold uppercase mt-0.5 text-right score-reveal-fade ${getSentimentColor(asset.sentiment)}`} style={{ animationDelay: '400ms' }}>{asset.sentiment ?? '—'}</div>
                         </div>
-                        {/* Overflow menu */}
-                        <div className="relative" ref={openMenu === asset.symbol ? menuRef : undefined}>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === asset.symbol ? null : asset.symbol); }}
-                                className={`p-1.5 rounded-lg opacity-100 transition-all duration-200 flex items-center justify-center ${isLight ? 'hover:bg-slate-100 text-slate-900' : 'hover:bg-white/10 text-gray-500'}`}
-                            >
-                                <MoreHorizontal size={16} />
-                            </button>
-                            {openMenu === asset.symbol && (
-                                <div className={`absolute right-0 top-8 z-50 w-40 py-1 rounded-xl overflow-hidden border shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${isLight ? 'bg-white border-slate-200' : 'bg-[#1a1a2e] border-white/10'}`}>
-                                    <button onClick={() => { onSetAlert?.(asset); setOpenMenu(null); }} className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${isLight ? 'text-slate-600 hover:bg-slate-50' : 'text-gray-300 hover:bg-white/5'}`}>
-                                        <Bell size={14} className="text-yellow-500" /> Set Alert
-                                    </button>
-                                    <div className={`mx-3 my-1 border-t ${isLight ? 'border-slate-100' : 'border-white/5'}`} />
-                                    <button onClick={() => handleRemove(asset.symbol)} className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium transition-colors ${isLight ? 'text-slate-900 hover:text-slate-900 hover:bg-slate-100' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                                        <Trash2 size={14} /> Remove
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                        {/* Overflow menu trigger (popup renders via portal) */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (openMenu === asset.symbol) {
+                                    setOpenMenu(null);
+                                    setMenuAnchor(null);
+                                } else {
+                                    setOpenMenu(asset.symbol);
+                                    setMenuAnchor(e.currentTarget);
+                                }
+                            }}
+                            className={`p-1.5 rounded-lg opacity-100 transition-all duration-200 flex items-center justify-center ${isLight ? 'hover:bg-slate-100 text-slate-900' : 'hover:bg-white/10 text-gray-500'}`}
+                        >
+                            <MoreHorizontal size={16} />
+                        </button>
                     </div>
                 </div>
             </div>
         );
     };
 
+    const activeMenuAsset = openMenu ? assets.find(a => a.symbol === openMenu) : null;
+
     return (
         <div className="w-full">
+            {activeMenuAsset && (
+                <RowMenu
+                    anchorEl={menuAnchor}
+                    isLight={isLight}
+                    onSetAlert={() => onSetAlert?.(activeMenuAsset)}
+                    onRemove={() => handleRemove(activeMenuAsset.symbol)}
+                    onClose={() => { setOpenMenu(null); setMenuAnchor(null); }}
+                />
+            )}
             {atTickerCap && (
                 <div className={`px-6 py-2 text-xs border-b ${isLight ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-amber-300 bg-amber-900/20 border-amber-900/30'}`}>
                     You&apos;ve hit your ticker limit for this watchlist.{' '}
@@ -417,10 +503,10 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                         )}
                     </div>
                 </div>
-                <div className="flex flex-col">{sorted.map(a => loadingSymbols.has(a.symbol) ? renderSkeletonDesktopRow(a) : renderDesktopRow(a))}</div>
+                <div className="flex flex-col">{sorted.map(a => (loadingSymbols.has(a.symbol) || !hasScore(a)) ? renderSkeletonDesktopRow(a) : renderDesktopRow(a))}</div>
             </div>
             {/* Mobile */}
-            <div className="md:hidden flex flex-col gap-3 p-4">{sorted.map(a => loadingSymbols.has(a.symbol) ? renderSkeletonMobileCard(a) : renderMobileCard(a))}</div>
+            <div className="md:hidden flex flex-col gap-3 p-4">{sorted.map(a => (loadingSymbols.has(a.symbol) || !hasScore(a)) ? renderSkeletonMobileCard(a) : renderMobileCard(a))}</div>
         </div>
     );
 };
