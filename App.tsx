@@ -122,7 +122,7 @@ const App: React.FC = () => {
     const lookupsExhausted = dailyLookupLimit !== null && dailyLookupsRemaining === 0;
     const [userPlan, setUserPlan] = useState<string>('free');
     const [userEmail, setUserEmail] = useState<string>('');
-    const [userMeta, setUserMeta] = useState<{ first_name?: string; last_name?: string; trades?: string } | null>(null);
+    const [userMeta, setUserMeta] = useState<{ first_name?: string; last_name?: string; trades?: string; full_name?: string; avatar_url?: string } | null>(null);
 
     const [alertTrialStartedAt, setAlertTrialStartedAt] = useState<string | null>(null);
 
@@ -1115,7 +1115,7 @@ const App: React.FC = () => {
                                                             className={`text-5xl md:text-7xl font-display font-bold tracking-tight text-center ${theme === "light" ? "text-slate-900" : "text-white"}`}
                                                         >
                                                             Welcome back,{" "}
-                                                            <span className="text-blue-500">{userMeta?.first_name?.trim() || 'there'}</span>
+                                                            <span className="text-blue-500">{userMeta?.first_name?.trim() || userMeta?.full_name?.trim().split(' ')[0] || 'there'}</span>
                                                         </h1>
                                                     </div>
                                                 )}
@@ -2065,14 +2065,16 @@ const App: React.FC = () => {
                                     {/* Profile Info Card */}
                                     <div className={`rounded-3xl border p-6 transition-colors duration-500 ${theme === "light" ? "bg-white border-black/5" : "bg-black/30 border-[#27273a]"}`}>
                                         <div className="flex items-center gap-4 mb-6">
-                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold ${theme === "light" ? "bg-blue-50 text-blue-600" : "bg-blue-600/10 text-blue-400"}`}>
-                                                {userMeta?.first_name?.[0]?.toUpperCase() ?? userEmail[0]?.toUpperCase() ?? '?'}
+                                            <div className={`w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-xl font-bold ${theme === "light" ? "bg-blue-50 text-blue-600" : "bg-blue-600/10 text-blue-400"}`}>
+                                                {userMeta?.avatar_url
+                                                    ? <img src={userMeta.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                                                    : (userMeta?.first_name?.[0] || userMeta?.full_name?.[0] || userEmail[0] || '?').toUpperCase()}
                                             </div>
                                             <div>
                                                 <p className={`font-bold text-lg ${theme === "light" ? "text-slate-900" : "text-white"}`}>
                                                     {userMeta?.first_name && userMeta?.last_name
                                                         ? `${userMeta.first_name} ${userMeta.last_name}`
-                                                        : userEmail}
+                                                        : userMeta?.full_name || userEmail}
                                                 </p>
                                                 <p className={`text-sm ${theme === "light" ? "text-slate-500" : "text-gray-400"}`}>{userEmail}</p>
                                             </div>

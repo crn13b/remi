@@ -50,16 +50,24 @@ async function init(): Promise<void> {
 
     const meta = user.user_metadata ?? {};
 
-    // Profile already complete — skip to dashboard (still show confirm beat if just confirmed)
-    if (meta.profile_complete === true) {
-        if (justConfirmed) {
-            await showConfirmedMoment();
-        }
+    // Profile is "complete enough" if the flag is set OR the user already has
+    // any of our custom profile fields OR arrived via an OAuth provider that
+    // populated name/avatar. This covers pre-existing accounts (founder/admin)
+    // and Google/OAuth signups whose metadata was populated by the provider.
+    const hasCustomProfile = !!(meta.first_name || meta.last_name || meta.trades || meta.experience_level);
+    const isOAuthPopulated = !!(meta.iss || meta.avatar_url || meta.full_name);
+    const profileComplete = meta.profile_complete === true || hasCustomProfile || isOAuthPopulated;
+
+    // Existing user (profile already complete) — skip straight to dashboard.
+    // Don't show "Email confirmed!" because ?code= also fires on every OAuth
+    // login, not just first-time confirmation.
+    if (profileComplete) {
         window.location.href = getDestination(user.id);
         return;
     }
 
-    // New user — show confirmation success first, then welcome flow
+    // Genuinely new user — show the confirmation beat first (if they got here
+    // from an email link), then the welcome flow.
     if (justConfirmed) {
         await showConfirmedMoment();
     }
