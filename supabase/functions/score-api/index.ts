@@ -15,11 +15,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRemiScore } from "../_shared/remi-score/engine.ts";
 import type { RemiScoreResult } from "../_shared/remi-score/engine.ts";
 import { canLookupScore, getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
-import {
-  decideLatchUpdates,
-  type CurrentState,
-  type LatchRow,
-} from "../_shared/last-call/upsert.ts";
 
 const MAX_BATCH_SIZE = 30;
 
@@ -29,24 +24,9 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
 };
 
-interface LastCallResponse {
-  score: number;
-  side: "bullish" | "bearish";
-  price: number;
-  at: string;
-  peakScore: number;
-  peakScoreAt: string;
-  peakMove: number;
-  peakMoveAt: string;
-  // (currentPrice - callPrice) / callPrice, computed per request.
-  // null when no fresh price is available (e.g. cached-watchlist response).
-  currentMove: number | null;
-}
-
 type ScoreResult = RemiScoreResult & {
   source?: "watchlist" | "lookup";
   cached?: boolean;
-  lastCall?: LastCallResponse | null;
 };
 
 function jsonResponse(status: number, data: unknown): Response {
@@ -54,156 +34,6 @@ function jsonResponse(status: number, data: unknown): Response {
     status,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
-}
-
-// Admin client is typed loosely here: the concrete return type of
-// `createClient<Database>` is awkward to reference without a generated
-// Database type, and we only need the generic query/rpc surface.
-// deno-lint-ignore no-explicit-any
-type AdminClient = any;
-
-const LATCH_COLUMNS =
-  "symbol, last_call_score, last_call_side, last_call_price, last_call_at, last_call_peak_score, last_call_peak_score_at, last_call_peak_move, last_call_peak_move_at";
-
-/** Build the response-shape lastCall from a LatchRow. Returns null if no latch.
- *  Pass `currentPrice = null` on the cached path (no fresh price available);
- *  the response will carry `currentMove: null` so the UI can show "—" instead
- *  of a misleading 0%.
- */
-function buildLastCallResponse(
-  row: LatchRow | null,
-  currentPrice: number | null,
-): LastCallResponse | null {
-  if (
-    !row ||
-    row.last_call_score === null ||
-    row.last_call_side === null ||
-    row.last_call_price === null ||
-    row.last_call_at === null
-  ) {
-    return null;
-  }
-  return {
-    score: row.last_call_score,
-    side: row.last_call_side,
-    price: row.last_call_price,
-    at: row.last_call_at,
-    peakScore: row.last_call_peak_score ?? row.last_call_score,
-    peakScoreAt: row.last_call_peak_score_at ?? row.last_call_at,
-    peakMove: row.last_call_peak_move ?? 0,
-    peakMoveAt: row.last_call_peak_move_at ?? row.last_call_at,
-    currentMove:
-      currentPrice === null
-        ? null
-        : (currentPrice - row.last_call_price) / row.last_call_price,
-  };
-}
-
-/** True when the runtime kill switch is engaged; latch reads/writes are skipped. */
-function latchDisabled(): boolean {
-  return Deno.env.get("REMI_LATCH_DISABLED") === "1";
-}
-
-/** Read-only fetch of the latch row. Returns null on error (best-effort). */
-async function fetchLatchRow(
-  admin: AdminClient,
-  symbol: string,
-): Promise<LatchRow | null> {
-  if (latchDisabled()) return null;
-  try {
-    const { data } = await admin
-      .from("asset_last_call")
-      .select(LATCH_COLUMNS)
-      .eq("symbol", symbol)
-      .maybeSingle();
-    return (data ?? null) as LatchRow | null;
-  } catch (e) {
-    console.error(`latch read failed for ${symbol}:`, e);
-    return null;
-  }
-}
-
-/** For a fresh-computed score, run the latch decision + any required RPC
- *  writes, then return the latest latch row for building the response.
- *  Best-effort — errors are logged but don't fail the response. Uses the
- *  admin client (service-role) because asset_last_call is RLS-locked.
- */
-async function runLatchAndFetch(
-  admin: AdminClient,
-  symbol: string,
-  score: number,
-  currentPrice: number,
-  previousScore: number | null,
-): Promise<LatchRow | null> {
-  if (latchDisabled()) return null;
-  const candleTs = new Date().toISOString();
-
-  try {
-    const { data: rowData } = await admin
-      .from("asset_last_call")
-      .select(LATCH_COLUMNS)
-      .eq("symbol", symbol)
-      .maybeSingle();
-    const row = (rowData ?? null) as LatchRow | null;
-
-    const state: CurrentState = {
-      symbol,
-      score,
-      currentPrice,
-      observedAt: candleTs,
-      previousScore,
-    };
-    const updates = decideLatchUpdates(state, row);
-
-    for (const u of updates) {
-      const rpcParams: Record<string, unknown> = {
-        p_symbol: u.symbol,
-        p_mode: u.mode,
-        p_score: null,
-        p_side: null,
-        p_price: null,
-        p_call_at: null,
-        p_peak_score: null,
-        p_peak_score_at: null,
-        p_peak_move: null,
-        p_peak_move_at: null,
-      };
-      if (u.mode === "new_call") {
-        rpcParams.p_score = u.score;
-        rpcParams.p_side = u.side;
-        rpcParams.p_price = u.price;
-        rpcParams.p_call_at = u.callAt;
-      } else if (u.mode === "peak_update") {
-        rpcParams.p_peak_score = u.peakScore;
-        rpcParams.p_peak_score_at = u.peakScoreAt;
-      } else if (u.mode === "move_update") {
-        rpcParams.p_peak_move = u.peakMove;
-        rpcParams.p_peak_move_at = u.peakMoveAt;
-      }
-      const { error: rpcErr } = await admin.rpc(
-        "upsert_asset_last_call",
-        rpcParams,
-      );
-      if (rpcErr) {
-        console.error(`latch RPC failed for ${symbol}:`, rpcErr);
-      }
-    }
-
-    // If any update fired, re-read so the response reflects the latest
-    // state. Otherwise the original row is still current.
-    if (updates.length > 0) {
-      const { data: latestData } = await admin
-        .from("asset_last_call")
-        .select(LATCH_COLUMNS)
-        .eq("symbol", symbol)
-        .maybeSingle();
-      return (latestData ?? null) as LatchRow | null;
-    }
-    return row;
-  } catch (e) {
-    console.error(`latch block threw for ${symbol}:`, e);
-    return null;
-  }
 }
 
 Deno.serve(async (req) => {
@@ -341,19 +171,11 @@ Deno.serve(async (req) => {
 
           if (isFresh) {
             // Cached path — return a minimal result shaped like RemiScoreResult.
-            // We don't have a fresh price on the cached path, so currentMove
-            // is emitted as null (UI shows "—" rather than a misleading 0%).
-            // The historical peakMove is still surfaced, which is the main
-            // display value. A future follow-up could store cached_price
-            // alongside cached_score to enable a real currentMove here.
-            const latch = await fetchLatchRow(admin, sym);
-            const lastCall = buildLastCallResponse(latch, null);
             const cachedResult = {
               symbol: sym,
               score: wlRow!.cached_score as number,
               source: "watchlist" as const,
               cached: true,
-              lastCall,
             } as ScoreResult;
             results[sym] = cachedResult;
             continue;
@@ -381,22 +203,14 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Previous score: use the cached_score if we had one (it's what
-          // was last observed for this user's watchlist). Null if absent.
-          const prevScore = wlRow!.cached_score ?? null;
-          const latch = await runLatchAndFetch(admin, sym, fresh.score, fresh.priceRaw, prevScore);
-          const lastCall = buildLastCallResponse(latch, fresh.priceRaw);
-          const out = { ...fresh, source: "watchlist" as const, lastCall } as ScoreResult;
+          const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
           results[sym] = out;
         } else {
           // Paid/owner: always real-time.
           if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
           upstreamCalls++;
           const fresh = await getRemiScore(sym);
-          const prevScore = wlRow!.cached_score ?? null;
-          const latch = await runLatchAndFetch(admin, sym, fresh.score, fresh.priceRaw, prevScore);
-          const lastCall = buildLastCallResponse(latch, fresh.priceRaw);
-          const out = { ...fresh, source: "watchlist" as const, lastCall } as ScoreResult;
+          const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
           results[sym] = out;
         }
       } else {
@@ -427,10 +241,7 @@ Deno.serve(async (req) => {
         if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
         upstreamCalls++;
         const fresh = await getRemiScore(sym);
-        // Lookup path has no per-user prior score; previousScore = null.
-        const latch = await runLatchAndFetch(admin, sym, fresh.score, fresh.priceRaw, null);
-        const lastCall = buildLastCallResponse(latch, fresh.priceRaw);
-        const out = { ...fresh, source: "lookup" as const, lastCall } as ScoreResult;
+        const out = { ...fresh, source: "lookup" as const } as ScoreResult;
         results[sym] = out;
       }
     } catch (err) {
