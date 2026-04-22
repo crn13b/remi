@@ -90,11 +90,17 @@ function buildLastCallResponse(
   };
 }
 
+/** True when the runtime kill switch is engaged; latch reads/writes are skipped. */
+function latchDisabled(): boolean {
+  return Deno.env.get("REMI_LATCH_DISABLED") === "1";
+}
+
 /** Read-only fetch of the latch row. Returns null on error (best-effort). */
 async function fetchLatchRow(
   admin: AdminClient,
   symbol: string,
 ): Promise<LatchRow | null> {
+  if (latchDisabled()) return null;
   try {
     const { data } = await admin
       .from("asset_last_call")
@@ -120,6 +126,7 @@ async function runLatchAndFetch(
   currentPrice: number,
   previousScore: number | null,
 ): Promise<LatchRow | null> {
+  if (latchDisabled()) return null;
   const candleTs = new Date().toISOString();
 
   try {

@@ -295,7 +295,9 @@ Deno.serve(async (req) => {
 
         // 6b. Latch "last call" state for each symbol.
         // Best-effort — failures logged but do not fail the cron.
-        try {
+        // Runtime kill switch: set REMI_LATCH_DISABLED=1 to skip this block entirely.
+        const latchDisabled = Deno.env.get("REMI_LATCH_DISABLED") === "1";
+        if (!latchDisabled) try {
             const { data: latchRows, error: latchErr } = await supabase
                 .from("asset_last_call")
                 .select("symbol, last_call_score, last_call_side, last_call_price, last_call_at, last_call_peak_score, last_call_peak_score_at, last_call_peak_move, last_call_peak_move_at")
