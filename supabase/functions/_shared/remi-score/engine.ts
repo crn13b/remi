@@ -148,7 +148,15 @@ function scoreToColor(score: number): string {
 export async function getRemiScore(symbol: string): Promise<RemiScoreResult> {
   const sym = symbol.toUpperCase();
 
-  const candles = await fetchCandles(sym);
+  const rawCandles = await fetchCandles(sym);
+
+  // When REMI_ENGINE_V2 is enabled, drop the last (potentially in-progress)
+  // candle so scoring and downstream price/change fields reflect the most
+  // recent CLOSED bar.
+  const engineV2 = Deno.env.get("REMI_ENGINE_V2") === "1";
+  const candles = engineV2 && rawCandles.length > 1
+    ? rawCandles.slice(0, -1)
+    : rawCandles;
 
   // Run scoring engine
   const engineResult: CombinedScore = computeScore(candles);
