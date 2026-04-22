@@ -108,6 +108,91 @@ Deno.test("previously neutral, unknown previous score: current in-tier → new_c
     assertEquals(updates[0].mode, "new_call");
 });
 
+// ─── Critical: same-side latch row protects against repeated rewrites ───
+
+Deno.test(
+    "same-side bullish latch + previousScore=null does NOT emit new_call",
+    () => {
+        // Regression guard: a lookup request (score-api) has no access to
+        // the user's previous score, so it passes previousScore=null. If
+        // the helper treated that as a fresh entry every time, every
+        // dashboard render would rewrite the latch and wipe peak history.
+        // The latch row itself is the source of truth.
+        const state: CurrentState = {
+            symbol: "ETH",
+            score: 80,  // still in bullish tier
+            currentPrice: 2100,
+            candleTimestamp: "2026-04-21T02:00:00Z",
+            previousScore: null,
+        };
+        const updates = decideLatchUpdates(state, bullishRow());
+        const newCall = updates.find((u) => u.mode === "new_call");
+        assertEquals(
+            newCall,
+            undefined,
+            "must not rewrite same-side latch when previousScore is unknown",
+        );
+    },
+);
+
+Deno.test(
+    "same-side bearish latch + previousScore=null does NOT emit new_call",
+    () => {
+        const state: CurrentState = {
+            symbol: "ETH",
+            score: 20,
+            currentPrice: 1900,
+            candleTimestamp: "2026-04-20T04:00:00Z",
+            previousScore: null,
+        };
+        const updates = decideLatchUpdates(state, bearishRow());
+        const newCall = updates.find((u) => u.mode === "new_call");
+        assertEquals(newCall, undefined);
+    },
+);
+
+Deno.test(
+    "opposite-side latch + previousScore=null: side flip still fires new_call",
+    () => {
+        // Bearish latch exists; score flips to bullish tier. Even with
+        // unknown previousScore, the row's opposite side is clear evidence
+        // of a side flip → new_call must fire.
+        const state: CurrentState = {
+            symbol: "ETH",
+            score: 75,
+            currentPrice: 1850,
+            candleTimestamp: "2026-04-21T00:00:00Z",
+            previousScore: null,
+        };
+        const updates = decideLatchUpdates(state, bearishRow());
+        assertEquals(updates.length, 1);
+        assertEquals(updates[0].mode, "new_call");
+        if (updates[0].mode === "new_call") {
+            assertEquals(updates[0].side, "bullish");
+        }
+    },
+);
+
+Deno.test(
+    "no latch row but previousScore indicates same-side in-tier: no new_call",
+    () => {
+        // Cron-style path: previousScore is known from alerts.last_score
+        // and was already in-tier. If the latch row was somehow cleared
+        // (manual delete, migration rollback), previousScore still shows
+        // we're not entering fresh — so don't emit new_call.
+        const state: CurrentState = {
+            symbol: "ETH",
+            score: 80,
+            currentPrice: 2100,
+            candleTimestamp: "2026-04-21T02:00:00Z",
+            previousScore: 75,  // was already in bullish tier
+        };
+        const updates = decideLatchUpdates(state, null);
+        const newCall = updates.find((u) => u.mode === "new_call");
+        assertEquals(newCall, undefined);
+    },
+);
+
 // ─── No-op cases ─────────────────────────────────────────────────
 
 Deno.test("neutral score with no existing row emits no updates", () => {

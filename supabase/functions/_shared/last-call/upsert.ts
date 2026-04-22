@@ -66,10 +66,14 @@ function tierSide(score: number): LatchSide | null {
  * Decide which latch updates (if any) should be written for this tick.
  *
  * Fires a new_call when the score enters the bullish or bearish tier from
- * neutral (or flips from the opposite tier). While the score stays in-tier
- * on the same side, emits peak_update when score improves and move_update
- * when the favorable price move improves. Neutral with no existing row
- * returns an empty list.
+ * an out-of-tier state (neutral or opposite side). Uses the existing latch
+ * row as the primary source of truth for "previously in-tier on this side" —
+ * so a caller that doesn't know `previousScore` (e.g. a lookup request)
+ * can still avoid stomping a same-side latch that was already recorded.
+ *
+ * While the score stays in-tier on the same side, emits peak_update when
+ * score improves and move_update when the favorable price move improves.
+ * Neutral with no existing row returns an empty list.
  */
 export function decideLatchUpdates(
     state: CurrentState,
@@ -79,14 +83,27 @@ export function decideLatchUpdates(
     const currSide = tierSide(state.score);
     const prevSide =
         state.previousScore === null ? null : tierSide(state.previousScore);
+    const latchSide = row?.last_call_side ?? null;
 
-    // Fresh tier entry: currently in-tier, and either previously neutral
-    // (or unknown) or previously in the opposite tier. A same-side repeat
-    // entry (previously in-tier, exited, now re-entered) also counts — it
-    // represents a distinct new call from the user's perspective.
+    // Fresh tier entry requires BOTH:
+    //   - currently in-tier, and
+    //   - no existing same-side latch AND (previous score was out-of-tier
+    //     on a different side, OR we have no prior evidence either way).
+    //
+    // If the latch row already has `last_call_side === currSide`, we've
+    // previously recorded this call — do NOT rewrite base fields; just
+    // refine peaks below. This protects against score-api lookups (which
+    // pass previousScore=null) from overwriting cron-written latch state
+    // on every dashboard render.
+    //
+    // If `previousScore` explicitly shows the same-side tier on the prior
+    // tick, that also proves "not fresh" even if the latch row is empty
+    // (e.g. the cron is catching up on a symbol whose latch was cleared
+    // but alerts.last_score still reflects in-tier state).
+    const sameSideLatch = latchSide !== null && latchSide === currSide;
+    const sameSidePrevScore = prevSide !== null && prevSide === currSide;
     const isFreshEntry =
-        currSide !== null &&
-        (prevSide === null || prevSide !== currSide);
+        currSide !== null && !sameSideLatch && !sameSidePrevScore;
 
     if (isFreshEntry) {
         updates.push({
