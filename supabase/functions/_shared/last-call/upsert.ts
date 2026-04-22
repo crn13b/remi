@@ -85,25 +85,34 @@ export function decideLatchUpdates(
         state.previousScore === null ? null : tierSide(state.previousScore);
     const latchSide = row?.last_call_side ?? null;
 
-    // Fresh tier entry requires BOTH:
-    //   - currently in-tier, and
-    //   - no existing same-side latch AND (previous score was out-of-tier
-    //     on a different side, OR we have no prior evidence either way).
+    // Fresh tier entry rules:
+    //   - Must be currently in-tier.
+    //   - A new call is "not fresh" only when we have proof of BOTH an
+    //     existing same-side latch row AND a previous score also in the
+    //     same tier (= continuously in-tier since the last call).
+    //   - Same-side latch alone is not enough, because a score can go
+    //     bullish → neutral → bullish and the second entry is a distinct
+    //     call. The latch row persists from the first call; we need the
+    //     previousScore to disambiguate.
+    //   - Previous score same-side alone is also not enough: if the latch
+    //     row is empty (e.g. first time seeing this symbol), we should
+    //     record the entry even though the alert-evaluation layer may show
+    //     in-tier history.
     //
-    // If the latch row already has `last_call_side === currSide`, we've
-    // previously recorded this call — do NOT rewrite base fields; just
-    // refine peaks below. This protects against score-api lookups (which
-    // pass previousScore=null) from overwriting cron-written latch state
-    // on every dashboard render.
-    //
-    // If `previousScore` explicitly shows the same-side tier on the prior
-    // tick, that also proves "not fresh" even if the latch row is empty
-    // (e.g. the cron is catching up on a symbol whose latch was cleared
-    // but alerts.last_score still reflects in-tier state).
+    // Known limitation: score-api lookup callers pass previousScore=null
+    // and so cannot disambiguate "continuously in-tier" from "re-entry
+    // after a neutral dip". They will over-collapse re-entries into the
+    // prior call. The cron (evaluate-alerts) catches up within 60s with
+    // correct disambiguation via alerts.last_score.
     const sameSideLatch = latchSide !== null && latchSide === currSide;
     const sameSidePrevScore = prevSide !== null && prevSide === currSide;
+    const continuouslyInTier = sameSideLatch && sameSidePrevScore;
+    // Lookup path (previousScore=null) + same-side latch: treat as
+    // continuous to avoid repeated rewrites on every dashboard render.
+    const lookupSameSideFallback =
+        sameSideLatch && state.previousScore === null;
     const isFreshEntry =
-        currSide !== null && !sameSideLatch && !sameSidePrevScore;
+        currSide !== null && !continuouslyInTier && !lookupSameSideFallback;
 
     if (isFreshEntry) {
         updates.push({

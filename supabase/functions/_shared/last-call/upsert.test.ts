@@ -174,22 +174,72 @@ Deno.test(
 );
 
 Deno.test(
-    "no latch row but previousScore indicates same-side in-tier: no new_call",
+    "no latch row but previousScore indicates same-side in-tier: new_call fires to seed row",
     () => {
-        // Cron-style path: previousScore is known from alerts.last_score
-        // and was already in-tier. If the latch row was somehow cleared
-        // (manual delete, migration rollback), previousScore still shows
-        // we're not entering fresh — so don't emit new_call.
+        // When the latch row doesn't exist yet, we always need new_call to
+        // create the row — even if previousScore suggests in-tier state
+        // from somewhere (alerts.last_score) because there's no existing
+        // latch to refine. The first observation creates the latch.
         const state: CurrentState = {
             symbol: "ETH",
             score: 80,
             currentPrice: 2100,
             observedAt: "2026-04-21T02:00:00Z",
-            previousScore: 75,  // was already in bullish tier
+            previousScore: 75,
         };
         const updates = decideLatchUpdates(state, null);
         const newCall = updates.find((u) => u.mode === "new_call");
+        assertExists(newCall);
+    },
+);
+
+Deno.test(
+    "same-side latch + previousScore=neutral (re-entry from neutral): new_call fires",
+    () => {
+        // Critical scenario for cron: score was bullish, decayed to neutral,
+        // now back in bullish tier. The stale same-side latch row alone isn't
+        // enough to block a fresh call — previousScore=55 (neutral) is clear
+        // evidence we exited and re-entered. This is a new call.
+        //
+        // Lookup requests (which pass previousScore=null) cannot disambiguate
+        // this case; they will over-collapse re-entries. The cron catches up
+        // within 60s with correct disambiguation via alerts.last_score.
+        const state: CurrentState = {
+            symbol: "ETH",
+            score: 80,
+            currentPrice: 2150,
+            observedAt: "2026-04-21T05:00:00Z",
+            previousScore: 55,  // was neutral
+        };
+        const updates = decideLatchUpdates(state, bullishRow());
+        const newCall = updates.find((u) => u.mode === "new_call");
+        assertExists(newCall);
+        if (newCall.mode === "new_call") {
+            assertEquals(newCall.side, "bullish");
+            assertEquals(newCall.score, 80);
+        }
+    },
+);
+
+Deno.test(
+    "same-side latch + previousScore=sameSide: no new_call (continuous in-tier)",
+    () => {
+        // Counterpoint to the previous test: same-side latch AND prior score
+        // also same-side means we've been continuously in-tier. Peak updates
+        // fire, but the base call is not rewritten.
+        const state: CurrentState = {
+            symbol: "ETH",
+            score: 85,
+            currentPrice: 2200,
+            observedAt: "2026-04-21T02:00:00Z",
+            previousScore: 75,  // was bullish, still bullish
+        };
+        const updates = decideLatchUpdates(state, bullishRow());
+        const newCall = updates.find((u) => u.mode === "new_call");
         assertEquals(newCall, undefined);
+        // Peak updates should fire since score improved (75 → 85).
+        const peak = updates.find((u) => u.mode === "peak_update");
+        assertExists(peak);
     },
 );
 
