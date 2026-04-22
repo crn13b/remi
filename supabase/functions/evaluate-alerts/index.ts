@@ -21,6 +21,11 @@ import { sendDiscordDM, sendDiscordChannelMessage, refreshDiscordToken } from ".
 import { sendTelegramMessage } from "../_shared/notifications/telegram.ts";
 import { getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
 import type { EffectiveEntitlements } from "../_shared/entitlements/index.ts";
+import {
+    decideLatchUpdates,
+    type LatchRow,
+    type CurrentState,
+} from "../_shared/last-call/upsert.ts";
 
 const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -286,6 +291,84 @@ Deno.serve(async (req) => {
         const scoreMap = new Map<string, number>();
         for (const [sym, result] of scores) {
             scoreMap.set(sym, result.score);
+        }
+
+        // 6b. Latch "last call" state for each symbol.
+        // Best-effort — failures logged but do not fail the cron.
+        try {
+            const { data: latchRows, error: latchErr } = await supabase
+                .from("asset_last_call")
+                .select("symbol, last_call_score, last_call_side, last_call_price, last_call_at, last_call_peak_score, last_call_peak_score_at, last_call_peak_move, last_call_peak_move_at")
+                .in("symbol", symbols);
+
+            if (latchErr) {
+                console.error("latch read failed:", latchErr);
+            } else {
+                const latchMap = new Map<string, LatchRow>();
+                for (const r of (latchRows ?? []) as LatchRow[]) {
+                    latchMap.set(r.symbol, r);
+                }
+
+                // Build previousScore map: first non-null last_score per symbol.
+                const prevScoreBySymbol = new Map<string, number>();
+                for (const a of cappedAlerts) {
+                    if (a.last_score !== null && a.last_score !== undefined && !prevScoreBySymbol.has(a.symbol)) {
+                        prevScoreBySymbol.set(a.symbol, a.last_score);
+                    }
+                }
+
+                const candleTs = new Date().toISOString();
+
+                for (const sym of symbols) {
+                    const fullResult = scores.get(sym);
+                    if (!fullResult) continue;
+
+                    const state: CurrentState = {
+                        symbol: sym,
+                        score: fullResult.score,
+                        currentPrice: fullResult.priceRaw,
+                        candleTimestamp: candleTs,
+                        previousScore: prevScoreBySymbol.get(sym) ?? null,
+                    };
+                    const updates = decideLatchUpdates(state, latchMap.get(sym) ?? null);
+
+                    for (const u of updates) {
+                        const rpcParams: Record<string, unknown> = {
+                            p_symbol: u.symbol,
+                            p_mode: u.mode,
+                            p_score: null,
+                            p_side: null,
+                            p_price: null,
+                            p_call_at: null,
+                            p_peak_score: null,
+                            p_peak_score_at: null,
+                            p_peak_move: null,
+                            p_peak_move_at: null,
+                        };
+                        if (u.mode === "new_call") {
+                            rpcParams.p_score = u.score;
+                            rpcParams.p_side = u.side;
+                            rpcParams.p_price = u.price;
+                            rpcParams.p_call_at = u.callAt;
+                        } else if (u.mode === "peak_update") {
+                            rpcParams.p_peak_score = u.peakScore;
+                            rpcParams.p_peak_score_at = u.peakScoreAt;
+                        } else if (u.mode === "move_update") {
+                            rpcParams.p_peak_move = u.peakMove;
+                            rpcParams.p_peak_move_at = u.peakMoveAt;
+                        }
+                        const { error: rpcErr } = await supabase.rpc(
+                            "upsert_asset_last_call",
+                            rpcParams,
+                        );
+                        if (rpcErr) {
+                            console.error(`latch RPC failed for ${sym}:`, rpcErr);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("latch block threw:", e);
         }
 
         // 7. Detect crossings
