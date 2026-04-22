@@ -38,7 +38,9 @@ interface LastCallResponse {
   peakScoreAt: string;
   peakMove: number;
   peakMoveAt: string;
-  currentMove: number; // (currentPrice - callPrice) / callPrice, computed per request
+  // (currentPrice - callPrice) / callPrice, computed per request.
+  // null when no fresh price is available (e.g. cached-watchlist response).
+  currentMove: number | null;
 }
 
 type ScoreResult = RemiScoreResult & {
@@ -63,10 +65,14 @@ type AdminClient = any;
 const LATCH_COLUMNS =
   "symbol, last_call_score, last_call_side, last_call_price, last_call_at, last_call_peak_score, last_call_peak_score_at, last_call_peak_move, last_call_peak_move_at";
 
-/** Build the response-shape lastCall from a LatchRow. Returns null if no latch. */
+/** Build the response-shape lastCall from a LatchRow. Returns null if no latch.
+ *  Pass `currentPrice = null` on the cached path (no fresh price available);
+ *  the response will carry `currentMove: null` so the UI can show "—" instead
+ *  of a misleading 0%.
+ */
 function buildLastCallResponse(
   row: LatchRow | null,
-  currentPrice: number,
+  currentPrice: number | null,
 ): LastCallResponse | null {
   if (
     !row ||
@@ -86,7 +92,10 @@ function buildLastCallResponse(
     peakScoreAt: row.last_call_peak_score_at ?? row.last_call_at,
     peakMove: row.last_call_peak_move ?? 0,
     peakMoveAt: row.last_call_peak_move_at ?? row.last_call_at,
-    currentMove: (currentPrice - row.last_call_price) / row.last_call_price,
+    currentMove:
+      currentPrice === null
+        ? null
+        : (currentPrice - row.last_call_price) / row.last_call_price,
   };
 }
 
@@ -141,7 +150,7 @@ async function runLatchAndFetch(
       symbol,
       score,
       currentPrice,
-      candleTimestamp: candleTs,
+      observedAt: candleTs,
       previousScore,
     };
     const updates = decideLatchUpdates(state, row);
@@ -333,14 +342,12 @@ Deno.serve(async (req) => {
           if (isFresh) {
             // Cached path — return a minimal result shaped like RemiScoreResult.
             // We don't have a fresh price on the cached path, so currentMove
-            // is computed against the latch call price itself (i.e. 0). The
-            // historical peakMove is still surfaced, which is the main
+            // is emitted as null (UI shows "—" rather than a misleading 0%).
+            // The historical peakMove is still surfaced, which is the main
             // display value. A future follow-up could store cached_price
-            // alongside cached_score for a non-zero currentMove here.
+            // alongside cached_score to enable a real currentMove here.
             const latch = await fetchLatchRow(admin, sym);
-            const lastCall = latch && latch.last_call_price !== null
-              ? buildLastCallResponse(latch, latch.last_call_price)
-              : null;
+            const lastCall = buildLastCallResponse(latch, null);
             const cachedResult = {
               symbol: sym,
               score: wlRow!.cached_score as number,

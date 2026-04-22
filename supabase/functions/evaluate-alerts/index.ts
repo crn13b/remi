@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
                         symbol: sym,
                         score: fullResult.score,
                         currentPrice: fullResult.priceRaw,
-                        candleTimestamp: candleTs,
+                        observedAt: candleTs,
                         previousScore: prevScoreBySymbol.get(sym) ?? null,
                     };
                     const updates = decideLatchUpdates(state, latchMap.get(sym) ?? null);

@@ -50,7 +50,7 @@ Deno.test("fresh bullish entry from neutral emits new_call", () => {
         symbol: "ETH",
         score: 75,
         currentPrice: 2000,
-        candleTimestamp: "2026-04-21T01:00:00Z",
+        observedAt: "2026-04-21T01:00:00Z",
         previousScore: 55,
     };
     const updates = decideLatchUpdates(state, null);
@@ -68,7 +68,7 @@ Deno.test("fresh bearish entry from neutral emits new_call", () => {
         symbol: "ETH",
         score: 25,
         currentPrice: 2000,
-        candleTimestamp: "2026-04-21T01:00:00Z",
+        observedAt: "2026-04-21T01:00:00Z",
         previousScore: 55,
     };
     const updates = decideLatchUpdates(state, null);
@@ -84,7 +84,7 @@ Deno.test("bearish-latched + bullish tier entry emits new_call (side flip)", () 
         symbol: "ETH",
         score: 75,
         currentPrice: 1900,
-        candleTimestamp: "2026-04-21T01:00:00Z",
+        observedAt: "2026-04-21T01:00:00Z",
         previousScore: 25,
     };
     const updates = decideLatchUpdates(state, bearishRow());
@@ -100,7 +100,7 @@ Deno.test("previously neutral, unknown previous score: current in-tier → new_c
         symbol: "ETH",
         score: 80,
         currentPrice: 2000,
-        candleTimestamp: "2026-04-21T01:00:00Z",
+        observedAt: "2026-04-21T01:00:00Z",
         previousScore: null,
     };
     const updates = decideLatchUpdates(state, null);
@@ -122,7 +122,7 @@ Deno.test(
             symbol: "ETH",
             score: 80,  // still in bullish tier
             currentPrice: 2100,
-            candleTimestamp: "2026-04-21T02:00:00Z",
+            observedAt: "2026-04-21T02:00:00Z",
             previousScore: null,
         };
         const updates = decideLatchUpdates(state, bullishRow());
@@ -142,7 +142,7 @@ Deno.test(
             symbol: "ETH",
             score: 20,
             currentPrice: 1900,
-            candleTimestamp: "2026-04-20T04:00:00Z",
+            observedAt: "2026-04-20T04:00:00Z",
             previousScore: null,
         };
         const updates = decideLatchUpdates(state, bearishRow());
@@ -161,7 +161,7 @@ Deno.test(
             symbol: "ETH",
             score: 75,
             currentPrice: 1850,
-            candleTimestamp: "2026-04-21T00:00:00Z",
+            observedAt: "2026-04-21T00:00:00Z",
             previousScore: null,
         };
         const updates = decideLatchUpdates(state, bearishRow());
@@ -184,7 +184,7 @@ Deno.test(
             symbol: "ETH",
             score: 80,
             currentPrice: 2100,
-            candleTimestamp: "2026-04-21T02:00:00Z",
+            observedAt: "2026-04-21T02:00:00Z",
             previousScore: 75,  // was already in bullish tier
         };
         const updates = decideLatchUpdates(state, null);
@@ -200,7 +200,7 @@ Deno.test("neutral score with no existing row emits no updates", () => {
         symbol: "ETH",
         score: 55,
         currentPrice: 2000,
-        candleTimestamp: "2026-04-21T01:00:00Z",
+        observedAt: "2026-04-21T01:00:00Z",
         previousScore: 50,
     };
     const updates = decideLatchUpdates(state, null);
@@ -212,7 +212,7 @@ Deno.test("score decays from tier to neutral: no new_call, no peak update", () =
         symbol: "ETH",
         score: 55,  // back to neutral
         currentPrice: 2050,
-        candleTimestamp: "2026-04-21T01:00:00Z",
+        observedAt: "2026-04-21T01:00:00Z",
         previousScore: 75,
     };
     const updates = decideLatchUpdates(state, bullishRow());
@@ -226,7 +226,7 @@ Deno.test("bullish in-tier with higher score emits peak_update", () => {
         symbol: "ETH",
         score: 85,
         currentPrice: 2000,
-        candleTimestamp: "2026-04-21T00:15:00Z",
+        observedAt: "2026-04-21T00:15:00Z",
         previousScore: 75,
     };
     const updates = decideLatchUpdates(state, bullishRow());
@@ -242,7 +242,7 @@ Deno.test("bullish in-tier with EQUAL score does NOT emit peak_update", () => {
         symbol: "ETH",
         score: 75,
         currentPrice: 2000,
-        candleTimestamp: "2026-04-21T00:15:00Z",
+        observedAt: "2026-04-21T00:15:00Z",
         previousScore: 75,
     };
     const updates = decideLatchUpdates(state, bullishRow());
@@ -255,7 +255,7 @@ Deno.test("bearish in-tier with LOWER score emits peak_update", () => {
         symbol: "ETH",
         score: 15,  // lower = stronger bearish
         currentPrice: 2000,
-        candleTimestamp: "2026-04-20T03:00:00Z",
+        observedAt: "2026-04-20T03:00:00Z",
         previousScore: 25,
     };
     const updates = decideLatchUpdates(state, bearishRow());
@@ -273,7 +273,7 @@ Deno.test("bullish in-tier with favorable price move emits move_update", () => {
         symbol: "ETH",
         score: 75,
         currentPrice: 2200,  // up from call price 2000 → +10%
-        candleTimestamp: "2026-04-21T00:15:00Z",
+        observedAt: "2026-04-21T00:15:00Z",
         previousScore: 75,
     };
     const updates = decideLatchUpdates(state, bullishRow());
@@ -289,7 +289,7 @@ Deno.test("bearish in-tier with favorable (negative) move emits move_update", ()
         symbol: "ETH",
         score: 25,
         currentPrice: 1800,  // down from call price 2000 → -10%
-        candleTimestamp: "2026-04-20T03:00:00Z",
+        observedAt: "2026-04-20T03:00:00Z",
         previousScore: 25,
     };
     const updates = decideLatchUpdates(state, bearishRow());
@@ -311,7 +311,7 @@ Deno.test("bullish with smaller-than-stored peak move does NOT emit move_update"
         symbol: "ETH",
         score: 75,
         currentPrice: 2050,  // only +2.5%, smaller than 0.15
-        candleTimestamp: "2026-04-21T00:20:00Z",
+        observedAt: "2026-04-21T00:20:00Z",
         previousScore: 75,
     };
     const updates = decideLatchUpdates(state, row);
@@ -325,7 +325,7 @@ Deno.test("bullish with UNFAVORABLE move (current price below call) does NOT emi
         symbol: "ETH",
         score: 75,
         currentPrice: 1900,  // -5% from call price 2000
-        candleTimestamp: "2026-04-21T00:15:00Z",
+        observedAt: "2026-04-21T00:15:00Z",
         previousScore: 75,
     };
     const updates = decideLatchUpdates(state, bullishRow());

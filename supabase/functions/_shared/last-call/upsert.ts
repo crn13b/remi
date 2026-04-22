@@ -30,7 +30,7 @@ export interface CurrentState {
     symbol: string;
     score: number;
     currentPrice: number;
-    candleTimestamp: string;   // ISO timestamp of the candle being scored
+    observedAt: string;   // ISO timestamp when this state was observed (ideally the last closed candle's ts; falls back to wall clock)
     previousScore: number | null;  // last observed score (null = unknown)
 }
 
@@ -112,7 +112,7 @@ export function decideLatchUpdates(
             score: state.score,
             side: currSide as LatchSide,
             price: state.currentPrice,
-            callAt: state.candleTimestamp,
+            callAt: state.observedAt,
         });
         // After a new_call, peak fields reset server-side; don't emit
         // peak updates in the same tick — the next tick refines them.
@@ -137,7 +137,7 @@ export function decideLatchUpdates(
                 mode: "peak_update",
                 symbol: state.symbol,
                 peakScore: state.score,
-                peakScoreAt: state.candleTimestamp,
+                peakScoreAt: state.observedAt,
             });
         }
 
@@ -156,7 +156,7 @@ export function decideLatchUpdates(
                 mode: "move_update",
                 symbol: state.symbol,
                 peakMove: move,
-                peakMoveAt: state.candleTimestamp,
+                peakMoveAt: state.observedAt,
             });
         }
     }
