@@ -51,5 +51,40 @@ serve(async (req) => {
     .insert({ watchlist_id, symbol: symbolUpper, name: name ?? symbolUpper })
     .select().single();
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
+
+  // ── Seed tracked_symbols so the symbol enters the refresh loop ──
+  // Jitter 0-60s so a burst of adds doesn't sync up. Don't overwrite
+  // existing rows — if the symbol is already tracked, let it keep its
+  // current next_refresh_at.
+  const seedRefreshAt = new Date(
+    Date.now() + 60_000 + Math.floor(Math.random() * 60) * 1000,
+  ).toISOString();
+
+  // Provider-specific interval: stocks get 30 min, crypto 15 min.
+  const cryptoSet = new Set([
+    'BTC','ETH','SOL','XRP','ADA','DOGE','DOT','AVAX','LINK',
+    'MATIC','ATOM','UNI','LTC','BCH','NEAR','APT','ARB','OP',
+    'SUI','SEI','INJ','TIA','FET','RENDER','BNB','PEPE','SHIB',
+    'WIF','BONK',
+  ]);
+  const isCrypto = symbolUpper.includes(':') || cryptoSet.has(symbolUpper);
+  const refreshIntervalSec = isCrypto ? 900 : 1800;
+
+  const { error: trackErr } = await supabase
+    .from('tracked_symbols')
+    .upsert(
+      {
+        symbol: symbolUpper,
+        next_refresh_at: seedRefreshAt,
+        refresh_interval_sec: refreshIntervalSec,
+      },
+      { onConflict: 'symbol', ignoreDuplicates: true },
+    );
+  if (trackErr) {
+    // Non-fatal: the watchlist row is already inserted. Log for ops
+    // and move on — the symbol will get tracked on first view via score-api.
+    console.error(`add-watchlist-asset: tracked_symbols seed failed for ${symbolUpper}:`, trackErr);
+  }
+
   return new Response(JSON.stringify(data), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
 });
