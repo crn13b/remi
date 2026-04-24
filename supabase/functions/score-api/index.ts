@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     ]),
   );
 
-  const hitSymbols: string[] = [];
+  const viewedSymbols: string[] = [];
   let upstreamCalls = 0;
 
   for (const sym of normalized) {
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
         stale,
       } as ScoreResult & { stale: boolean };
 
-      hitSymbols.push(sym);
+      viewedSymbols.push(sym);
       continue;
     }
 
@@ -249,18 +249,23 @@ Deno.serve(async (req) => {
       const fresh = await getRemiScore(sym);
       const now = new Date();
 
-      // Upsert tracked_symbols FIRST so global_symbol_scores' FK is satisfied
-      await admin.from("tracked_symbols").upsert({
-        symbol: sym,
-        last_viewed_at: now.toISOString(),
-        view_count: 1,
-        next_refresh_at: new Date(
-          now.getTime() + 900 * 1000 + Math.floor(Math.random() * 60) * 1000,
-        ).toISOString(),
-        refresh_interval_sec: 900,
-        consecutive_failure_count: 0,
-        last_successful_refresh_at: now.toISOString(),
-      }, { onConflict: "symbol" });
+      // Insert tracked_symbols row FIRST so global_symbol_scores' FK is satisfied.
+      // Use ignoreDuplicates so we don't clobber view_count on existing rows —
+      // the view gets recorded via record_symbol_views at the end, covering both
+      // the genuinely-new insert case (view_count starts at 0 from the default
+      // column, then the RPC bumps it to 1) and the "symbol was already tracked
+      // but cache was empty" case (view_count just increments).
+      await admin.from("tracked_symbols").upsert(
+        {
+          symbol: sym,
+          next_refresh_at: new Date(
+            now.getTime() + 900 * 1000 + Math.floor(Math.random() * 60) * 1000,
+          ).toISOString(),
+          refresh_interval_sec: 900,
+          last_successful_refresh_at: now.toISOString(),
+        },
+        { onConflict: "symbol", ignoreDuplicates: true },
+      );
 
       await admin.from("global_symbol_scores").upsert({
         symbol: sym,
@@ -274,6 +279,7 @@ Deno.serve(async (req) => {
         computed_at: now.toISOString(),
       }, { onConflict: "symbol" });
 
+      viewedSymbols.push(sym);
       results[sym] = { ...fresh, source, cached: false } as ScoreResult;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -286,12 +292,16 @@ Deno.serve(async (req) => {
     }
   }
 
-  // ── Batch record views on cache hits ──
-  if (hitSymbols.length > 0) {
+  // ── Batch record views for every successfully-returned symbol ──
+  // This covers both cache hits and successful cache-miss computes. Cache-miss
+  // failures are excluded (viewedSymbols is only pushed on success). For new
+  // inserts, view_count starts at 0 (DB default) and the RPC bumps it to 1;
+  // for existing rows it simply increments — no reset risk.
+  if (viewedSymbols.length > 0) {
     // Single UPDATE … WHERE symbol IN (...) is atomic enough; view_count increments
     // are advisory so the `view_count + 1` race is acceptable (worst case: undercount
     // during concurrent reads, which is fine for eviction decisions).
-    await admin.rpc("record_symbol_views", { p_symbols: hitSymbols });
+    await admin.rpc("record_symbol_views", { p_symbols: viewedSymbols });
   }
 
   // Strip engine detail for non-owners
