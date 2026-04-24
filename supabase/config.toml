@@ -402,6 +402,9 @@ verify_jwt = false
 [functions.evaluate-alerts]
 verify_jwt = false
 
+[functions.evict-stale-symbols]
+verify_jwt = false
+
 [functions.refresh-global-scores]
 verify_jwt = false
 
