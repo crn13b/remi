@@ -41,6 +41,7 @@ import { updateNotificationPrefs } from "./services/meService";
 import { searchCatalog, searchGeckoTerminal, searchBinance, type CatalogEntry } from "./data/assetCatalog";
 import { useEntitlements } from "./hooks/useEntitlements";
 import { ToastViewport, showToast } from "./components/Toast";
+import { startWatchlistScorePolling } from "./services/pollWatchlistScores";
 
 // ─── Watchlist Types ───
 import type { WatchlistGroup } from "./services/watchlistService";
@@ -229,6 +230,18 @@ const App: React.FC = () => {
         })();
     }, [userId]);
 
+    // ─── 60s Score Polling ───
+    useEffect(() => {
+        if (!userId) return;
+        // Capture latest watchlists via a ref so the poller always reads fresh state
+        // without being re-created when `watchlists` changes.
+        const stop = startWatchlistScorePolling(
+            () => watchlistsRef.current,
+            setWatchlists,
+        );
+        return stop;
+    }, [userId]);
+
     // ─── Alert Handlers (Supabase-backed) ───
     // Mutation errors (including tier-gate 402/403) are surfaced via toast
     // and optimistic UI state is rolled back to the pre-mutation snapshot.
@@ -383,6 +396,10 @@ const App: React.FC = () => {
 
     // ─── Watchlist State ───
     const [watchlists, setWatchlists] = useState<WatchlistGroup[]>([]);
+    const watchlistsRef = useRef<WatchlistGroup[]>([]);
+    useEffect(() => {
+        watchlistsRef.current = watchlists;
+    }, [watchlists]);
     const [activeWatchlistId, setActiveWatchlistId] = useState<string>('');
     const [watchlistSearch, setWatchlistSearch] = useState('');
     const [isWatchlistSearchFocused, setIsWatchlistSearchFocused] = useState(false);
