@@ -49,7 +49,8 @@ export function startWatchlistScorePolling(
               a.score === r.score &&
               a.price === r.price &&
               a.change === r.change &&
-              a.sentiment === r.sentiment
+              a.sentiment === r.sentiment &&
+              (a.stale ?? false) === (r.stale ?? false)
             ) {
               return a;
             }
@@ -60,6 +61,7 @@ export function startWatchlistScorePolling(
               change: r.change ?? a.change,
               sentiment: r.sentiment ?? a.sentiment,
               color: r.color ?? a.color,
+              stale: r.stale ?? false,
             };
           }),
         })),
