@@ -61,28 +61,35 @@ Deno.serve(async (req) => {
   let failed = 0;
 
   try {
-    // ── Select due symbols, partitioned by provider ──
-    const { data: dueRows, error: dueErr } = await supabase
+    // ── Select due symbols, one query per asset class so stocks can't
+    //    starve crypto (and vice versa) during a catch-up burst. We pull
+    //    a small buffer (×4) and classify on the server side, because the
+    //    table doesn't store provider class — classification is derived
+    //    from the symbol string.
+    const nowIso = new Date().toISOString();
+    const { data: candidateRows, error: candidateErr } = await supabase
       .from("tracked_symbols")
       .select("symbol, refresh_interval_sec, consecutive_failure_count")
-      .lte("next_refresh_at", new Date().toISOString())
+      .lte("next_refresh_at", nowIso)
+      .lt("consecutive_failure_count", 10)    // ← skip dead-letter rows
       .order("next_refresh_at", { ascending: true })
-      .limit(MAX_STOCKS_PER_TICK + MAX_CRYPTO_PER_TICK + 20); // small buffer for filtering
+      .limit((MAX_STOCKS_PER_TICK + MAX_CRYPTO_PER_TICK) * 4);
 
-    if (dueErr) {
-      console.error("refresh-global-scores: select due failed:", dueErr);
+    if (candidateErr) {
+      console.error("refresh-global-scores: select due failed:", candidateErr);
       return jsonResponse(500, { error: "select failed" });
     }
 
     const stocks: TrackedRow[] = [];
     const crypto: TrackedRow[] = [];
-    for (const row of (dueRows ?? []) as TrackedRow[]) {
+    for (const row of (candidateRows ?? []) as TrackedRow[]) {
       const cls = classifyProvider(row.symbol);
       if (cls === "stock" && stocks.length < MAX_STOCKS_PER_TICK) {
         stocks.push(row);
       } else if (cls === "crypto" && crypto.length < MAX_CRYPTO_PER_TICK) {
         crypto.push(row);
       }
+      if (stocks.length >= MAX_STOCKS_PER_TICK && crypto.length >= MAX_CRYPTO_PER_TICK) break;
     }
 
     // ── Process stocks sequentially with delay (Twelve Data rate limit) ──
@@ -149,7 +156,10 @@ async function refreshOneSymbol(row: TrackedRow): Promise<boolean> {
       })
       .eq("symbol", symbol);
     if (updErr) {
-      console.error(`refresh ${symbol} update failed:`, updErr);
+      console.error(
+        `refresh ${symbol}: cache upserted but schedule update failed — symbol will be re-selected on next tick:`,
+        updErr,
+      );
       return false;
     }
 
@@ -175,6 +185,11 @@ async function markFailure(
       last_refresh_error: message.slice(0, 500),
     })
     .eq("symbol", symbol);
-  if (error) console.error(`mark-failure ${symbol} update failed:`, error);
+  if (error) {
+    console.error(
+      `mark-failure ${symbol} update failed (symbol will retry on next tick until DB recovers or failure_count reaches 10):`,
+      error,
+    );
+  }
   return false;
 }
