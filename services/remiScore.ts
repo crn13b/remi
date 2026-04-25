@@ -24,6 +24,7 @@ export interface RemiScoreResult {
   bearish: { state: string; isDiverging: boolean; score: number };
   bullish: { state: string; isDiverging: boolean; score: number };
   detail?: FounderDetail;
+  stale?: boolean;       // true when server signals this score is 2h+ old AND failing
 }
 
 export interface FounderDetail {

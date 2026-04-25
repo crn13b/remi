@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Asset } from '../../types';
-import { ArrowUp, ArrowDown, MoreHorizontal, Bell, Trash2, List, Settings, Eye, EyeOff } from 'lucide-react';
+import { ArrowUp, ArrowDown, MoreHorizontal, Bell, Trash2, List, Settings, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useEntitlements } from '../../hooks/useEntitlements';
 
 /* ─── RowMenu: renders via portal to escape table's clipping/stacking contexts ─── */
@@ -357,6 +357,15 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                             <>
                                 <AnimatedScore target={score} className={`text-xl font-bold ${getScoreColor(score)}`} />
                                 <span className={`text-xs ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>/100</span>
+                                {asset.stale && (
+                                    <span
+                                        title="We're having trouble refreshing this score. Shown value may be outdated."
+                                        className={`ml-1.5 inline-flex items-center ${isLight ? 'text-amber-600' : 'text-amber-400'}`}
+                                        aria-label="Score may be outdated"
+                                    >
+                                        <AlertTriangle size={12} />
+                                    </span>
+                                )}
                             </>
                         )}
                     </div>
@@ -426,6 +435,15 @@ const WatchlistTable: React.FC<WatchlistTableProps> = ({
                             <div className="flex items-baseline gap-0.5">
                                 <AnimatedScore target={score} className={`text-lg font-bold ${getScoreColor(score)}`} />
                                 <span className={`text-[10px] ${isLight ? 'text-slate-900' : 'text-gray-500'}`}>/100</span>
+                                {asset.stale && (
+                                    <span
+                                        title="We're having trouble refreshing this score. Shown value may be outdated."
+                                        className={`ml-1.5 inline-flex items-center ${isLight ? 'text-amber-600' : 'text-amber-400'}`}
+                                        aria-label="Score may be outdated"
+                                    >
+                                        <AlertTriangle size={11} />
+                                    </span>
+                                )}
                             </div>
                             <div className={`text-[10px] font-bold uppercase mt-0.5 text-right score-reveal-fade ${getSentimentColor(asset.sentiment)}`} style={{ animationDelay: '400ms' }}>{asset.sentiment ?? '—'}</div>
                         </div>

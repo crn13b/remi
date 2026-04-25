@@ -14,5 +14,6 @@ export interface Asset {
     sentiment: 'Strong Buy' | 'Buy' | 'Hold' | 'Sell' | 'Strong Sell' | 'High Probability Setup';
     color: string;
     score?: number; // Live REMi divergence score (10-100)
+    stale?: boolean;
 }
 

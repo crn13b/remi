@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { canAddWatchlistTicker } from "../_shared/entitlements/index.ts";
+import { defaultRefreshIntervalSec } from "../_shared/score-refresh/provider-routing.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -51,5 +52,34 @@ serve(async (req) => {
     .insert({ watchlist_id, symbol: symbolUpper, name: name ?? symbolUpper })
     .select().single();
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
+
+  // ── Seed tracked_symbols so the symbol enters the refresh loop ──
+  // Jitter 0-60s so a burst of adds doesn't sync up. Don't overwrite
+  // existing rows — if the symbol is already tracked, let it keep its
+  // current next_refresh_at.
+  const seedRefreshAt = new Date(
+    Date.now() + 60_000 + Math.floor(Math.random() * 60) * 1000,
+  ).toISOString();
+
+  // Provider-specific interval comes from the shared classifier helper
+  // (single source of truth — see provider-routing.ts).
+  const refreshIntervalSec = defaultRefreshIntervalSec(symbolUpper);
+
+  const { error: trackErr } = await supabase
+    .from('tracked_symbols')
+    .upsert(
+      {
+        symbol: symbolUpper,
+        next_refresh_at: seedRefreshAt,
+        refresh_interval_sec: refreshIntervalSec,
+      },
+      { onConflict: 'symbol', ignoreDuplicates: true },
+    );
+  if (trackErr) {
+    // Non-fatal: the watchlist row is already inserted. Log for ops
+    // and move on — the symbol will get tracked on first view via score-api.
+    console.error(`add-watchlist-asset: tracked_symbols seed failed for ${symbolUpper}:`, trackErr);
+  }
+
   return new Response(JSON.stringify(data), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
 });

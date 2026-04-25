@@ -15,6 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRemiScore } from "../_shared/remi-score/engine.ts";
 import type { RemiScoreResult } from "../_shared/remi-score/engine.ts";
 import { canLookupScore, getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
+import { defaultRefreshIntervalSec } from "../_shared/score-refresh/provider-routing.ts";
 
 const MAX_BATCH_SIZE = 30;
 
@@ -130,9 +131,7 @@ Deno.serve(async (req) => {
     watchlist_id: string;
   };
   const watchlistBySym = new Map<string, WLRow>();
-  const activeWatchlistIds = new Set<string>();
   for (const row of (wlRows ?? []) as unknown as WLRow[]) {
-    activeWatchlistIds.add(row.watchlist_id);
     const sym = row.symbol.toUpperCase();
     const existing = watchlistBySym.get(sym);
     if (!existing) {
@@ -147,103 +146,140 @@ Deno.serve(async (req) => {
   const results: Record<string, ScoreResult> = {};
   const errors: Record<string, { code: string; message: string }> = {};
 
-  const freshnessMs = eff.entitlements.watchlistScoreFreshnessSeconds * 1000;
-  const isPaidOrOwner = eff.isOwner || eff.plan !== "free";
+  // ── Batch read global cache ──
+  const { data: cacheRows, error: cacheErr } = await admin
+    .from("global_symbol_scores")
+    .select("symbol, score, sentiment, price, price_raw, change, change_raw, name, computed_at")
+    .in("symbol", normalized);
+  if (cacheErr) console.error("score-api: cache read failed:", cacheErr);
 
+  type CacheRow = {
+    symbol: string;
+    score: number;
+    sentiment: string;
+    price: string;
+    price_raw: number;
+    change: string;
+    change_raw: number;
+    name: string;
+    computed_at: string;
+  };
+  const cacheBySym = new Map<string, CacheRow>(
+    (cacheRows ?? []).map((r) => [(r as CacheRow).symbol.toUpperCase(), r as CacheRow]),
+  );
+
+  // Also batch read tracked_symbols.consecutive_failure_count for staleness detection
+  const { data: trackedRows } = await admin
+    .from("tracked_symbols")
+    .select("symbol, consecutive_failure_count")
+    .in("symbol", normalized);
+  const failuresBySym = new Map<string, number>(
+    (trackedRows ?? []).map((r) => [
+      (r as { symbol: string }).symbol.toUpperCase(),
+      (r as { consecutive_failure_count: number }).consecutive_failure_count,
+    ]),
+  );
+
+  const viewedSymbols: string[] = [];
   let upstreamCalls = 0;
 
-  for (let i = 0; i < normalized.length; i++) {
-    const sym = normalized[i];
-    const wlRow = watchlistBySym.get(sym);
-    const source: "watchlist" | "lookup" = wlRow ? "watchlist" : "lookup";
+  for (const sym of normalized) {
+    const cached = cacheBySym.get(sym);
+    const source: "watchlist" | "lookup" = watchlistBySym.has(sym) ? "watchlist" : "lookup";
 
-    try {
-      if (source === "watchlist") {
-        // Free users: serve cached if fresh; else recompute and update row.
-        if (!isPaidOrOwner) {
-          const lastMs = wlRow!.last_refreshed_at
-            ? new Date(wlRow!.last_refreshed_at).getTime()
-            : 0;
-          const isFresh =
-            wlRow!.cached_score !== null &&
-            lastMs > 0 &&
-            Date.now() - lastMs < freshnessMs;
+    if (cached) {
+      // ── Cache hit ──
+      const computedAtMs = new Date(cached.computed_at).getTime();
+      const ageMs = Date.now() - computedAtMs;
+      const failureCount = failuresBySym.get(sym) ?? 0;
+      // "Stale" only when we have evidence something is broken: 2h+ old AND failing
+      const stale = ageMs > 2 * 60 * 60 * 1000 && failureCount > 0;
 
-          if (isFresh) {
-            // Cached path — return a minimal result shaped like RemiScoreResult.
-            const cachedResult = {
-              symbol: sym,
-              score: wlRow!.cached_score as number,
-              source: "watchlist" as const,
-              cached: true,
-            } as ScoreResult;
-            results[sym] = cachedResult;
-            continue;
-          }
+      results[sym] = {
+        symbol: sym,
+        score: cached.score,
+        sentiment: cached.sentiment as ScoreResult["sentiment"],
+        price: cached.price,
+        priceRaw: cached.price_raw,
+        change: cached.change,
+        changeRaw: cached.change_raw,
+        name: cached.name,
+        rsi: 0,             // not cached; analyze-view still populates these on fresh compute
+        signal: "neutral",
+        color: "gray-500",
+        bearish: { state: "IDLE", isDiverging: false, score: 0 },
+        bullish: { state: "IDLE", isDiverging: false, score: 0 },
+        source,
+        cached: true,
+        stale,
+      } as ScoreResult & { stale: boolean };
 
-          // Stale or absent — recompute and persist.
-          if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
-          upstreamCalls++;
-          const fresh = await getRemiScore(sym);
-          const nowIso = new Date().toISOString();
+      viewedSymbols.push(sym);
+      continue;
+    }
 
-          // Scope update by symbol AND only watchlists owned by this user.
-          // Uses `admin` (service-role) because Phase 2 RLS lockdown revokes
-          // UPDATE on watchlist_assets from authenticated. Without this, the
-          // write silently fails and the 4h cache is effectively bypassed.
-          const wlIds = [...activeWatchlistIds];
-          if (wlIds.length > 0) {
-            const { error: cacheErr } = await admin
-              .from("watchlist_assets")
-              .update({ cached_score: fresh.score, last_refreshed_at: nowIso })
-              .eq("symbol", sym)
-              .in("watchlist_id", wlIds);
-            if (cacheErr) {
-              console.error(`score-api cache refresh failed for ${sym}:`, cacheErr);
-            }
-          }
-
-          const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
-          results[sym] = out;
-        } else {
-          // Paid/owner: always real-time.
-          if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
-          upstreamCalls++;
-          const fresh = await getRemiScore(sym);
-          const out = { ...fresh, source: "watchlist" as const } as ScoreResult;
-          results[sym] = out;
-        }
-      } else {
-        // Source = lookup
-        const gate = await canLookupScore(supabase, user.id, sym);
-        if (!gate.allowed) {
+    // ── Cache miss ──
+    // For lookup-source symbols (not on any watchlist) we still gate the user
+    // with the daily-lookup quota before computing. Watchlist-source misses
+    // bypass the quota (the symbol was added to a watchlist through add-watchlist-asset
+    // which has its own tier gating).
+    if (source === "lookup") {
+      const gate = await canLookupScore(supabase, user.id, sym);
+      if (!gate.allowed) {
+        errors[sym] = {
+          code: gate.code ?? "LOOKUP_DENIED",
+          message: gate.reason ?? "Lookup denied",
+        };
+        continue;
+      }
+      if (!eff.isOwner && eff.entitlements.dailyScoreLookupLimit !== null) {
+        const { data: ok, error: rpcErr } = await supabase.rpc("consume_score_lookup");
+        if (rpcErr || ok === false) {
           errors[sym] = {
-            code: gate.code ?? "LOOKUP_DENIED",
-            message: gate.reason ?? "Lookup denied",
+            code: "RATE_LIMITED",
+            message: "Daily score lookup limit reached. Upgrade for unlimited lookups.",
           };
           continue;
         }
-
-        // Atomic quota consumption for free users with a daily limit.
-        // The RPC derives uid via auth.uid() and cap via profiles.plan, so
-        // we pass no arguments — see 20260408120000_harden_consume_score_lookup.sql.
-        if (!eff.isOwner && eff.entitlements.dailyScoreLookupLimit !== null) {
-          const { data: ok, error: rpcErr } = await supabase.rpc("consume_score_lookup");
-          if (rpcErr || ok === false) {
-            errors[sym] = {
-              code: "RATE_LIMITED",
-              message: "Daily score lookup limit reached. Upgrade for unlimited lookups.",
-            };
-            continue;
-          }
-        }
-
-        if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
-        upstreamCalls++;
-        const fresh = await getRemiScore(sym);
-        const out = { ...fresh, source: "lookup" as const } as ScoreResult;
-        results[sym] = out;
       }
+    }
+
+    try {
+      if (upstreamCalls > 0) await new Promise((r) => setTimeout(r, 300));
+      upstreamCalls++;
+      const fresh = await getRemiScore(sym);
+      const now = new Date();
+
+      // Atomic cache-miss seed: insert tracked_symbols row + global_symbol_scores
+      // row in one transactional RPC. If either write fails, the whole thing
+      // rolls back and we surface the error to the user instead of silently
+      // returning a fresh score with no cache row (which would leave the
+      // symbol orphaned from the refresh cron's selection set).
+      const intervalSec = defaultRefreshIntervalSec(sym);
+      const jitterSec = Math.floor(Math.random() * 60);
+      const { error: seedErr } = await admin.rpc("seed_tracked_symbol_with_score", {
+        p_symbol: sym,
+        p_score: fresh.score,
+        p_sentiment: fresh.sentiment,
+        p_price: fresh.price,
+        p_price_raw: fresh.priceRaw,
+        p_change: fresh.change,
+        p_change_raw: fresh.changeRaw,
+        p_name: fresh.name,
+        p_interval_sec: intervalSec,
+        p_jitter_sec: jitterSec,
+      });
+      if (seedErr) {
+        console.error(`score-api: seed_tracked_symbol_with_score failed for ${sym}:`, seedErr);
+        errors[sym] = {
+          code: "cache_seed_failed",
+          message: "Score computed but cache write failed; please retry.",
+        };
+        continue;
+      }
+
+      viewedSymbols.push(sym);
+      results[sym] = { ...fresh, source, cached: false } as ScoreResult;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       const isInvalid =
@@ -251,9 +287,20 @@ Deno.serve(async (req) => {
         message.includes("No data") ||
         message.includes("invalid_symbol") ||
         message.includes("not found");
-      const code = isInvalid ? "invalid_symbol" : "fetch_failed";
-      errors[sym] = { code, message };
+      errors[sym] = { code: isInvalid ? "invalid_symbol" : "fetch_failed", message };
     }
+  }
+
+  // ── Batch record views for every successfully-returned symbol ──
+  // This covers both cache hits and successful cache-miss computes. Cache-miss
+  // failures are excluded (viewedSymbols is only pushed on success). For new
+  // inserts, view_count starts at 0 (DB default) and the RPC bumps it to 1;
+  // for existing rows it simply increments — no reset risk.
+  if (viewedSymbols.length > 0) {
+    // Single UPDATE … WHERE symbol IN (...) is atomic enough; view_count increments
+    // are advisory so the `view_count + 1` race is acceptable (worst case: undercount
+    // during concurrent reads, which is fine for eviction decisions).
+    await admin.rpc("record_symbol_views", { p_symbols: viewedSymbols });
   }
 
   // Strip engine detail for non-owners

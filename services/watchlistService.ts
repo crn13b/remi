@@ -93,6 +93,7 @@ export async function hydrateWatchlistScores(
         change: r.change ?? a.change,
         sentiment: r.sentiment ?? a.sentiment,
         color: r.color ?? a.color,
+        stale: r.stale ?? false,
       };
     }),
   })));
