@@ -250,36 +250,33 @@ Deno.serve(async (req) => {
       const fresh = await getRemiScore(sym);
       const now = new Date();
 
-      // Insert tracked_symbols row FIRST so global_symbol_scores' FK is satisfied.
-      // Use ignoreDuplicates so we don't clobber view_count on existing rows —
-      // the view gets recorded via record_symbol_views at the end, covering both
-      // the genuinely-new insert case (view_count starts at 0 from the default
-      // column, then the RPC bumps it to 1) and the "symbol was already tracked
-      // but cache was empty" case (view_count just increments).
+      // Atomic cache-miss seed: insert tracked_symbols row + global_symbol_scores
+      // row in one transactional RPC. If either write fails, the whole thing
+      // rolls back and we surface the error to the user instead of silently
+      // returning a fresh score with no cache row (which would leave the
+      // symbol orphaned from the refresh cron's selection set).
       const intervalSec = defaultRefreshIntervalSec(sym);
-      await admin.from("tracked_symbols").upsert(
-        {
-          symbol: sym,
-          next_refresh_at: new Date(
-            now.getTime() + intervalSec * 1000 + Math.floor(Math.random() * 60) * 1000,
-          ).toISOString(),
-          refresh_interval_sec: intervalSec,
-          last_successful_refresh_at: now.toISOString(),
-        },
-        { onConflict: "symbol", ignoreDuplicates: true },
-      );
-
-      await admin.from("global_symbol_scores").upsert({
-        symbol: sym,
-        score: fresh.score,
-        sentiment: fresh.sentiment,
-        price: fresh.price,
-        price_raw: fresh.priceRaw,
-        change: fresh.change,
-        change_raw: fresh.changeRaw,
-        name: fresh.name,
-        computed_at: now.toISOString(),
-      }, { onConflict: "symbol" });
+      const jitterSec = Math.floor(Math.random() * 60);
+      const { error: seedErr } = await admin.rpc("seed_tracked_symbol_with_score", {
+        p_symbol: sym,
+        p_score: fresh.score,
+        p_sentiment: fresh.sentiment,
+        p_price: fresh.price,
+        p_price_raw: fresh.priceRaw,
+        p_change: fresh.change,
+        p_change_raw: fresh.changeRaw,
+        p_name: fresh.name,
+        p_interval_sec: intervalSec,
+        p_jitter_sec: jitterSec,
+      });
+      if (seedErr) {
+        console.error(`score-api: seed_tracked_symbol_with_score failed for ${sym}:`, seedErr);
+        errors[sym] = {
+          code: "cache_seed_failed",
+          message: "Score computed but cache write failed; please retry.",
+        };
+        continue;
+      }
 
       viewedSymbols.push(sym);
       results[sym] = { ...fresh, source, cached: false } as ScoreResult;
