@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { canAddWatchlistTicker } from "../_shared/entitlements/index.ts";
+import { defaultRefreshIntervalSec } from "../_shared/score-refresh/provider-routing.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -60,15 +61,9 @@ serve(async (req) => {
     Date.now() + 60_000 + Math.floor(Math.random() * 60) * 1000,
   ).toISOString();
 
-  // Provider-specific interval: stocks get 30 min, crypto 15 min.
-  const cryptoSet = new Set([
-    'BTC','ETH','SOL','XRP','ADA','DOGE','DOT','AVAX','LINK',
-    'MATIC','ATOM','UNI','LTC','BCH','NEAR','APT','ARB','OP',
-    'SUI','SEI','INJ','TIA','FET','RENDER','BNB','PEPE','SHIB',
-    'WIF','BONK',
-  ]);
-  const isCrypto = symbolUpper.includes(':') || cryptoSet.has(symbolUpper);
-  const refreshIntervalSec = isCrypto ? 900 : 1800;
+  // Provider-specific interval comes from the shared classifier helper
+  // (single source of truth — see provider-routing.ts).
+  const refreshIntervalSec = defaultRefreshIntervalSec(symbolUpper);
 
   const { error: trackErr } = await supabase
     .from('tracked_symbols')

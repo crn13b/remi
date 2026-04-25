@@ -1,5 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { classifyProvider } from "../provider-routing.ts";
+import {
+  classifyProvider,
+  defaultRefreshIntervalSec,
+} from "../provider-routing.ts";
 
 Deno.test("classifies known crypto symbols as crypto", () => {
   assertEquals(classifyProvider("BTC"), "crypto");
@@ -17,4 +20,16 @@ Deno.test("classifies unknown symbols (stocks) as stock", () => {
   assertEquals(classifyProvider("AAPL"), "stock");
   assertEquals(classifyProvider("SPY"), "stock");
   assertEquals(classifyProvider("NVDA"), "stock");
+});
+
+Deno.test("defaultRefreshIntervalSec: crypto = 15 min", () => {
+  assertEquals(defaultRefreshIntervalSec("BTC"), 900);
+  assertEquals(defaultRefreshIntervalSec("eth"), 900);
+  assertEquals(defaultRefreshIntervalSec("WIF:SOL"), 900);
+});
+
+Deno.test("defaultRefreshIntervalSec: stock = 30 min", () => {
+  assertEquals(defaultRefreshIntervalSec("AAPL"), 1800);
+  assertEquals(defaultRefreshIntervalSec("SPY"), 1800);
+  assertEquals(defaultRefreshIntervalSec("NVDA"), 1800);
 });

@@ -15,6 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRemiScore } from "../_shared/remi-score/engine.ts";
 import type { RemiScoreResult } from "../_shared/remi-score/engine.ts";
 import { canLookupScore, getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
+import { defaultRefreshIntervalSec } from "../_shared/score-refresh/provider-routing.ts";
 
 const MAX_BATCH_SIZE = 30;
 
@@ -255,13 +256,14 @@ Deno.serve(async (req) => {
       // the genuinely-new insert case (view_count starts at 0 from the default
       // column, then the RPC bumps it to 1) and the "symbol was already tracked
       // but cache was empty" case (view_count just increments).
+      const intervalSec = defaultRefreshIntervalSec(sym);
       await admin.from("tracked_symbols").upsert(
         {
           symbol: sym,
           next_refresh_at: new Date(
-            now.getTime() + 900 * 1000 + Math.floor(Math.random() * 60) * 1000,
+            now.getTime() + intervalSec * 1000 + Math.floor(Math.random() * 60) * 1000,
           ).toISOString(),
-          refresh_interval_sec: 900,
+          refresh_interval_sec: intervalSec,
           last_successful_refresh_at: now.toISOString(),
         },
         { onConflict: "symbol", ignoreDuplicates: true },

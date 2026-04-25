@@ -3,17 +3,14 @@ import { fetchBinanceCandles, isBinanceSymbol } from "./binance.ts";
 import { fetchTwelveDataCandles } from "./twelvedata.ts";
 import { fetchGeckoTerminalCandles, isGeckoTerminalToken } from "./geckoterminal.ts";
 import { cacheCandles, getCachedCandles, getSupabaseClient } from "./cache.ts";
+import { KNOWN_CRYPTO_SYMBOLS } from "../score-refresh/provider-routing.ts";
 
 /**
- * Known major crypto symbols that exist on Binance.
- * Anything not in this list and not a DEX token goes to Twelve Data.
+ * Known major crypto symbols that exist on Binance — re-exported under the
+ * old local name to keep the routing logic below readable. Single source of
+ * truth lives in score-refresh/provider-routing.ts.
  */
-const CRYPTO_SYMBOLS = new Set([
-  "BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "AVAX", "LINK",
-  "MATIC", "ATOM", "UNI", "LTC", "BCH", "NEAR", "APT", "ARB", "OP",
-  "SUI", "SEI", "INJ", "TIA", "FET", "RENDER", "BNB", "PEPE", "SHIB",
-  "WIF", "BONK",
-]);
+const CRYPTO_SYMBOLS = KNOWN_CRYPTO_SYMBOLS;
 
 /**
  * Unified entry point: fetch OHLCV candles for any asset type.
