@@ -233,10 +233,12 @@ const App: React.FC = () => {
     // ─── 60s Score Polling ───
     useEffect(() => {
         if (!userId) return;
-        // Capture latest watchlists via a ref so the poller always reads fresh state
-        // without being re-created when `watchlists` changes.
+        // Capture latest watchlists + active id via refs so the poller always
+        // reads fresh state without being re-created when either changes.
+        // The poller scopes to the active watchlist only (see pollWatchlistScores.ts).
         const stop = startWatchlistScorePolling(
             () => watchlistsRef.current,
+            () => activeWatchlistIdRef.current || null,
             setWatchlists,
         );
         return stop;
@@ -401,6 +403,10 @@ const App: React.FC = () => {
         watchlistsRef.current = watchlists;
     }, [watchlists]);
     const [activeWatchlistId, setActiveWatchlistId] = useState<string>('');
+    const activeWatchlistIdRef = useRef<string>('');
+    useEffect(() => {
+        activeWatchlistIdRef.current = activeWatchlistId;
+    }, [activeWatchlistId]);
     const [watchlistSearch, setWatchlistSearch] = useState('');
     const [isWatchlistSearchFocused, setIsWatchlistSearchFocused] = useState(false);
     const [recentlyAddedSymbol, setRecentlyAddedSymbol] = useState<string | null>(null);
