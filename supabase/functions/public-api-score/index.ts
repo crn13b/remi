@@ -51,7 +51,10 @@ async function readBodyText(req: Request): Promise<string | null> {
     if (len > MAX_BODY_BYTES) return null;
   }
   const text = await req.text();
-  if (text.length > MAX_BODY_BYTES) return null;
+  // Measure byte length, not UTF-16 code unit length. A request without a
+  // Content-Length header (chunked transfer) could otherwise sneak past the
+  // cap with multi-byte UTF-8 chars where 1 code unit = up to 4 bytes.
+  if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) return null;
   return text;
 }
 
@@ -179,6 +182,18 @@ Deno.serve(async (req) => {
       seen.add(sym);
       normalized.push(sym);
     }
+  }
+
+  // Skip the cache read entirely if every submitted symbol failed regex
+  // validation. Without this, supabase-js issues `symbol=in.()` against
+  // PostgREST, which returns a Postgres syntax error and we'd 500 the user
+  // for what is actually a clean all-errors response.
+  if (normalized.length === 0) {
+    const responseBody: PublicScoreResponse = {
+      results: {},
+      errors: errors as Record<string, PublicSymbolError>,
+    };
+    return jsonResponse(200, responseBody);
   }
 
   // ── Cache read ──
