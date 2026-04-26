@@ -12,6 +12,9 @@ create table if not exists public.api_keys (
   label               text not null,
   rate_limit_per_min  integer not null default 60,
   created_at          timestamptz not null default now(),
+  -- Updated out-of-band by the public-api-score Edge Function via a
+  -- fire-and-forget UPDATE after a successful request. This migration
+  -- only declares the column; it is intentionally not maintained here.
   last_used_at        timestamptz null,
   revoked_at          timestamptz null,
 
@@ -42,6 +45,12 @@ revoke all on public.api_key_rate_limits from authenticated, anon;
 -- Atomic per-minute counter. Returns true if the request is allowed,
 -- false if it would exceed p_limit_per_min. Edge Function calls this
 -- BEFORE doing the cache read; on false it returns 429 immediately.
+--
+-- Window semantics: this is a fixed window (not a sliding window). A
+-- caller can therefore burst up to 2 * p_limit_per_min requests across
+-- the boundary between two adjacent windows (limit at the end of one
+-- window, limit again at the start of the next). Accepted as a v1
+-- tradeoff for simplicity; revisit if abuse patterns emerge.
 create or replace function public.consume_api_request(
   p_key_id uuid,
   p_limit_per_min int
