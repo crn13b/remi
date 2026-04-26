@@ -9,6 +9,13 @@ import {
   isValidTokenFormat,
   parseBearerToken,
 } from "../_shared/public-api/auth.ts";
+import { applyScoreNoise } from "../_shared/public-api/noise.ts";
+import { scoreToSentiment } from "../_shared/remi-score/engine.ts";
+import type {
+  PublicScoreResponse,
+  PublicScoreResult,
+  PublicSymbolError,
+} from "../_shared/public-api/types.ts";
 
 const MAX_BODY_BYTES = 8 * 1024;
 
@@ -174,10 +181,69 @@ Deno.serve(async (req) => {
     }
   }
 
-  return jsonResponse(501, {
-    error: "not_implemented",
-    keyId: keyRow.id,
-    normalized,
-    errors,
-  });
+  // ── Cache read ──
+  type CacheRow = {
+    symbol: string;
+    score: number;
+    price: string;
+    price_raw: number;
+    change: string;
+    change_raw: number;
+    name: string;
+    computed_at: string;
+  };
+  const { data: cacheRows, error: cacheErr } = await supabase
+    .from("global_symbol_scores")
+    .select("symbol, score, price, price_raw, change, change_raw, name, computed_at")
+    .in("symbol", normalized);
+
+  if (cacheErr) {
+    console.error("public-api-score: cache read error", cacheErr);
+    return jsonResponse(500, { error: "internal_error" });
+  }
+
+  const rowsBySymbol = new Map<string, CacheRow>();
+  for (const r of (cacheRows ?? []) as CacheRow[]) {
+    rowsBySymbol.set(r.symbol.toUpperCase(), r);
+  }
+
+  // ── Build response ──
+  const results: Record<string, PublicScoreResult> = {};
+  const finalErrors: Record<string, PublicSymbolError> = {};
+  for (const sym of Object.keys(errors)) {
+    finalErrors[sym] = errors[sym] as PublicSymbolError;
+  }
+
+  for (const sym of normalized) {
+    const row = rowsBySymbol.get(sym);
+    if (!row) {
+      finalErrors[sym] = {
+        code: "not_tracked",
+        message:
+          "Symbol not in cache. Add it to a watchlist or trigger a lookup via the REMi UI to begin tracking.",
+      };
+      continue;
+    }
+    // Apply ±2 noise, then re-derive sentiment from the perturbed score so
+    // displayed score and displayed sentiment never disagree (which would
+    // leak the raw score at band boundaries).
+    const noisyScore = await applyScoreNoise(row.score, sym, keyRow.id, row.computed_at);
+    results[sym] = {
+      symbol: sym,
+      score: noisyScore,
+      sentiment: scoreToSentiment(noisyScore),
+      price: row.price,
+      price_raw: row.price_raw,
+      change: row.change,
+      change_raw: row.change_raw,
+      name: row.name,
+      computed_at: row.computed_at,
+    };
+  }
+
+  // last_used_at was already bumped inside consume_api_request, so no
+  // additional UPDATE is needed here.
+
+  const responseBody: PublicScoreResponse = { results, errors: finalErrors };
+  return jsonResponse(200, responseBody);
 });
