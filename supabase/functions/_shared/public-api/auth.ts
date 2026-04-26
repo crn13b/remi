@@ -24,6 +24,12 @@ const TOKEN_FULL_LEN = TOKEN_PREFIX.length + TOKEN_HEX_LEN;
  * - Trailing whitespace on the token is trimmed. A header like
  *   `"Bearer abc   "` yields token `"abc"`, not `"abc   "`. This is lenient
  *   by design.
+ *
+ * The HTTP runtime is expected to have already validated the header value
+ * (Deno's Headers.get follows the Fetch spec, which forbids CR/LF in header
+ * values and normalizes whitespace). The parser tolerates `\s` runs anyway
+ * for safety in tests and unusual transports, but the format gate
+ * (`isValidTokenFormat`) is what actually defends against attacker garbage.
  */
 export function parseBearerToken(header: string | null): string | null {
   if (!header) return null;

@@ -55,9 +55,22 @@ function readU32Be(bytes: Uint8Array): number {
 /**
  * Apply deterministic ±2 noise to a raw score. Output is clamped to [0, 100].
  *
+ * Preconditions (callers MUST validate before calling — this function does
+ * not re-validate to keep the hot path lean):
+ *  - `symbol` matches `^[A-Z0-9._-]{1,12}$` (max 12 bytes UTF-8). The Edge
+ *    Function enforces this at request parse time. The internal length-
+ *    prefix encoding uses 1-byte length headers and would throw on inputs
+ *    longer than 255 bytes; the symbol regex keeps us far below that.
+ *  - `keyId` is a canonical UUID from `api_keys.id` (Postgres `uuid` column,
+ *    always well-formed). The validator rejects non-canonical layouts.
+ *  - `computedAt` is an ISO 8601 UTC string from `global_symbol_scores.computed_at`
+ *    (Postgres `timestamptz`, always parseable and post-epoch).
+ *  - `rawScore` is an integer 0-100 from `global_symbol_scores.score`
+ *    (column constrained 0-100).
+ *
  * @param rawScore  Integer 0-100 from global_symbol_scores.
- * @param symbol    Uppercase ticker.
- * @param keyId     api_keys.id UUID (string with dashes).
+ * @param symbol    Uppercase ticker, regex-validated upstream.
+ * @param keyId     api_keys.id UUID (canonical 8-4-4-4-12 hex layout).
  * @param computedAt ISO 8601 UTC string from global_symbol_scores.computed_at.
  */
 export async function applyScoreNoise(
