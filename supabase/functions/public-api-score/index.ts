@@ -67,6 +67,22 @@ Deno.serve(async (req) => {
   }
 
   // ── Auth: parse and validate bearer token ──
+  //
+  // Deferred MVP tradeoffs (documented for future hardening):
+  // - No pre-auth IP/global rate limit. A bogus-token flood can force one
+  //   indexed api_keys lookup per request before reaching consume_api_request.
+  //   Mitigated for now by Supabase Edge runtime ceilings and a small,
+  //   manually-minted key set. Add IP-level throttling before opening the
+  //   API to public signups.
+  // - readBodyText still buffers the full body before measuring length.
+  //   8 KB ceiling holds, but a streaming reader would reject earlier.
+  // - `not_tracked` reveals which symbols are in the global cache, which
+  //   in turn reflects aggregate user-interest. Acceptable for the OpenClaw
+  //   MVP; revisit if the API moves to a curated public symbol universe.
+  // - api_keys.rate_limit_per_min ceiling is 6000 (DB-side). A leaked key
+  //   at the ceiling could drive ~180k SHA-256 digests/min. Set realistic
+  //   per-key caps when minting (default 60, override via the minting
+  //   script) — the 6000 is a safety bound, not the recommended value.
   const rawHeader = req.headers.get("authorization");
   const token = parseBearerToken(rawHeader);
   if (!token || !isValidTokenFormat(token)) {
