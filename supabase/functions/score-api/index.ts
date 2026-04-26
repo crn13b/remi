@@ -12,7 +12,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRemiScore } from "../_shared/remi-score/engine.ts";
+import { getRemiScore, projectScoreForPublic } from "../_shared/remi-score/engine.ts";
 import type { RemiScoreResult } from "../_shared/remi-score/engine.ts";
 import { canLookupScore, getEffectiveEntitlements } from "../_shared/entitlements/index.ts";
 import { defaultRefreshIntervalSec } from "../_shared/score-refresh/provider-routing.ts";
@@ -25,9 +25,17 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
 };
 
-type ScoreResult = RemiScoreResult & {
+// Server-side response shape. Engine-internal fields (rsi/signal/color/
+// bullish/bearish/detail) are present only on the owner branch — they are
+// inherited as optional from RemiScoreResult so a non-owner response that
+// omits them still typechecks.
+type ScoreResult = Partial<RemiScoreResult> & Pick<
+  RemiScoreResult,
+  "symbol" | "score" | "sentiment" | "price" | "priceRaw" | "change" | "changeRaw" | "name"
+> & {
   source?: "watchlist" | "lookup";
   cached?: boolean;
+  stale?: boolean;
 };
 
 function jsonResponse(status: number, data: unknown): Response {
@@ -187,15 +195,19 @@ Deno.serve(async (req) => {
     const cached = cacheBySym.get(sym);
     const source: "watchlist" | "lookup" = watchlistBySym.has(sym) ? "watchlist" : "lookup";
 
-    if (cached) {
-      // ── Cache hit ──
+    if (cached && !eff.isOwner) {
+      // ── Cache hit (non-owner) ──
+      // The global cache stores only the user-visible fields; engine internals
+      // (rsi/signal/color/bullish/bearish/detail) are not cached. Non-owners
+      // never receive engine internals anyway, so a cache hit is the final
+      // answer: build the public projection and continue.
       const computedAtMs = new Date(cached.computed_at).getTime();
       const ageMs = Date.now() - computedAtMs;
       const failureCount = failuresBySym.get(sym) ?? 0;
       // "Stale" only when we have evidence something is broken: 2h+ old AND failing
       const stale = ageMs > 2 * 60 * 60 * 1000 && failureCount > 0;
 
-      results[sym] = {
+      const result: ScoreResult = {
         symbol: sym,
         score: cached.score,
         sentiment: cached.sentiment as ScoreResult["sentiment"],
@@ -204,19 +216,20 @@ Deno.serve(async (req) => {
         change: cached.change,
         changeRaw: cached.change_raw,
         name: cached.name,
-        rsi: 0,             // not cached; analyze-view still populates these on fresh compute
-        signal: "neutral",
-        color: "gray-500",
-        bearish: { state: "IDLE", isDiverging: false, score: 0 },
-        bullish: { state: "IDLE", isDiverging: false, score: 0 },
         source,
         cached: true,
         stale,
-      } as ScoreResult & { stale: boolean };
+      };
+      results[sym] = result;
 
       viewedSymbols.push(sym);
       continue;
     }
+
+    // Owner falls through past the cache-hit branch even when a cache row
+    // exists — the founder analyze view needs live rsi/signal/divergence state
+    // that the cache doesn't store. The fresh compute below also re-seeds the
+    // cache via seed_tracked_symbol_with_score, so this acts as a refresh.
 
     // ── Cache miss ──
     // For lookup-source symbols (not on any watchlist) we still gate the user
@@ -279,7 +292,15 @@ Deno.serve(async (req) => {
       }
 
       viewedSymbols.push(sym);
-      results[sym] = { ...fresh, source, cached: false } as ScoreResult;
+      // Owner gets the full RemiScoreResult (engine internals included so the
+      // founder analyze-view can render rsi/signal/bullish/bearish/detail).
+      // Non-owners get the public projection only — engine internals never
+      // leave the server.
+      const projected = eff.isOwner
+        ? fresh
+        : projectScoreForPublic(fresh);
+      const result: ScoreResult = { ...projected, source, cached: false };
+      results[sym] = result;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       const isInvalid =
@@ -303,12 +324,9 @@ Deno.serve(async (req) => {
     await admin.rpc("record_symbol_views", { p_symbols: viewedSymbols });
   }
 
-  // Strip engine detail for non-owners
-  if (!eff.isOwner) {
-    for (const sym of Object.keys(results)) {
-      delete (results[sym] as unknown as Record<string, unknown>).detail;
-    }
-  }
+  // Engine internals are stripped at result-build time via projectScoreForPublic
+  // for non-owners; owner branch returns the full RemiScoreResult including detail.
+  // No post-hoc delete needed — the response is constructed correctly the first time.
 
   return jsonResponse(200, { results, errors });
 });

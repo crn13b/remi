@@ -17,13 +17,19 @@ export interface RemiScoreResult {
   changeRaw: number;
   name: string;
   symbol: string;
-  rsi: number;
-  signal: "bullish" | "bearish" | "neutral";
   sentiment: "Strong Buy" | "Buy" | "Hold" | "Sell" | "Strong Sell" | "High Probability Setup";
-  color: string;
-  bearish: { state: string; isDiverging: boolean; score: number };
-  bullish: { state: string; isDiverging: boolean; score: number };
+
+  // Engine-internal fields. The server returns these ONLY for the owner
+  // (founder) account. For non-owner authenticated users they are absent
+  // from the response. Components that read them (the founder analyze view)
+  // must treat them as optional.
+  rsi?: number;
+  signal?: "bullish" | "bearish" | "neutral";
+  color?: string;
+  bearish?: { state: string; isDiverging: boolean; score: number };
+  bullish?: { state: string; isDiverging: boolean; score: number };
   detail?: FounderDetail;
+
   stale?: boolean;       // true when server signals this score is 2h+ old AND failing
 }
 

@@ -93,6 +93,33 @@ export interface RemiScoreResult {
   };
 }
 
+// Safe-to-publish subset of RemiScoreResult. Engine internals (rsi, signal,
+// color, bullish, bearish, detail) are excluded. Used for any response served
+// to non-owner users and as the basis for the public API surface.
+export interface PublicRemiScoreResult {
+  symbol: string;
+  score: number;
+  sentiment: RemiScoreResult["sentiment"];
+  price: string;
+  priceRaw: number;
+  change: string;
+  changeRaw: number;
+  name: string;
+}
+
+export function projectScoreForPublic(result: RemiScoreResult): PublicRemiScoreResult {
+  return {
+    symbol: result.symbol,
+    score: result.score,
+    sentiment: result.sentiment,
+    price: result.price,
+    priceRaw: result.priceRaw,
+    change: result.change,
+    changeRaw: result.changeRaw,
+    name: result.name,
+  };
+}
+
 // ─── Candle Fetching (unified: Binance, Twelve Data, GeckoTerminal) ───
 
 interface EngineCandle {
