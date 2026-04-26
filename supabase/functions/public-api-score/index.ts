@@ -111,5 +111,73 @@ Deno.serve(async (req) => {
     return jsonResponse(413, { error: "payload_too_large" });
   }
 
-  return jsonResponse(501, { error: "not_implemented", keyId: keyRow.id, bodyText });
+  // ── Parse body ──
+  let body: unknown;
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    return jsonResponse(400, {
+      error: "invalid_request",
+      message: "Body is not valid JSON.",
+    });
+  }
+  if (typeof body !== "object" || body === null) {
+    return jsonResponse(400, {
+      error: "invalid_request",
+      message: "Body must be a JSON object.",
+    });
+  }
+
+  const symbols = (body as { symbols?: unknown }).symbols;
+  if (!Array.isArray(symbols)) {
+    return jsonResponse(400, {
+      error: "invalid_request",
+      message: "Field 'symbols' must be an array.",
+    });
+  }
+  if (symbols.length === 0) {
+    return jsonResponse(400, {
+      error: "invalid_request",
+      message: "At least one symbol is required.",
+    });
+  }
+  if (symbols.length > 30) {
+    return jsonResponse(400, {
+      error: "invalid_request",
+      message: "Maximum 30 symbols per request.",
+    });
+  }
+
+  // Normalize: trim, uppercase, dedup. Track per-symbol invalid format errors.
+  const normalized: string[] = [];
+  const errors: Record<string, { code: string; message: string }> = {};
+  const seen = new Set<string>();
+  const SYMBOL_RE = /^[A-Z0-9._-]{1,12}$/;
+  for (const raw of symbols) {
+    if (typeof raw !== "string") {
+      return jsonResponse(400, {
+        error: "invalid_request",
+        message: "All entries in 'symbols' must be strings.",
+      });
+    }
+    const sym = raw.trim().toUpperCase();
+    if (!SYMBOL_RE.test(sym)) {
+      errors[sym || "(empty)"] = {
+        code: "invalid_symbol",
+        message: "Symbol must match ^[A-Z0-9._-]{1,12}$ after uppercasing.",
+      };
+      continue;
+    }
+    if (!seen.has(sym)) {
+      seen.add(sym);
+      normalized.push(sym);
+    }
+  }
+
+  return jsonResponse(501, {
+    error: "not_implemented",
+    keyId: keyRow.id,
+    normalized,
+    errors,
+  });
 });
