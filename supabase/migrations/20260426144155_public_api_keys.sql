@@ -12,9 +12,8 @@ create table if not exists public.api_keys (
   label               text not null,
   rate_limit_per_min  integer not null default 60,
   created_at          timestamptz not null default now(),
-  -- Updated out-of-band by the public-api-score Edge Function via a
-  -- fire-and-forget UPDATE after a successful request. This migration
-  -- only declares the column; it is intentionally not maintained here.
+  -- Updated by consume_api_request() in the same transaction as the
+  -- rate-limit decision (single round-trip from the Edge Function).
   last_used_at        timestamptz null,
   revoked_at          timestamptz null,
 
@@ -42,49 +41,91 @@ revoke all on public.api_keys from authenticated, anon;
 revoke all on public.api_key_rate_limits from authenticated, anon;
 
 -- ─── consume_api_request RPC ──────────────────────────────────────
--- Atomic per-minute counter. Returns true if the request is allowed,
--- false if it would exceed p_limit_per_min. Edge Function calls this
--- BEFORE doing the cache read; on false it returns 429 immediately.
+-- Atomic rate-limit decision. Returns a row with:
+--   allowed              — true if the request fits inside the budget
+--   rate_limit_per_min   — the key's configured limit (for response headers)
+--   retry_after_seconds  — approximate seconds remaining in the current window
 --
--- Window semantics: this is a fixed window (not a sliding window). A
--- caller can therefore burst up to 2 * p_limit_per_min requests across
--- the boundary between two adjacent windows (limit at the end of one
--- window, limit again at the start of the next). Accepted as a v1
--- tradeoff for simplicity; revisit if abuse patterns emerge.
-create or replace function public.consume_api_request(
-  p_key_id uuid,
-  p_limit_per_min int
-) returns boolean
-language plpgsql
-security definer
-set search_path = public
+-- The RPC owns key lookup (so callers cannot pass a stale or wrong limit)
+-- and updates `last_used_at` in the same round-trip. The Edge Function
+-- calls this BEFORE the cache read; on allowed=false it returns 429.
+--
+-- Window semantics: 60s rolling window keyed off the first request's
+-- timestamp (window_start). Once 60s elapse since window_start, the next
+-- request resets the window and counts as 1. This is NOT a sliding
+-- window — bursts at a window boundary are possible.
+--
+-- KNOWN LIMITATION (boundary race): each transaction sees its own now()
+-- (transaction start time). At the boundary between two windows, two
+-- concurrent transactions can each carry their own now() — one started
+-- just before the boundary, the other just after. The earlier transaction
+-- may resume after the later one has already reset window_start, and
+-- increment the new window's count by 1. This admits at most one
+-- over-limit request per concurrent transaction at the boundary, bounded
+-- by parallelism. For MVP usage with a small number of customer keys
+-- this is acceptable. A stricter limiter (sliding window or token bucket)
+-- is a future change.
+drop function if exists public.consume_api_request(uuid, int);
+
+create or replace function public.consume_api_request(p_key_id uuid)
+  returns table (allowed boolean, rate_limit_per_min int, retry_after_seconds int)
+  language plpgsql
+  security definer
+  set search_path = pg_catalog, public, pg_temp
 as $$
 declare
-  v_now   timestamptz := now();
-  v_count int;
+  v_key     record;
+  v_count   int;
+  v_window  timestamptz;
 begin
+  -- Look up the key. Avoids trusting caller-supplied limit.
+  select id, rate_limit_per_min into v_key
+    from public.api_keys
+    where id = p_key_id and revoked_at is null;
+
+  if v_key.id is null then
+    allowed := false;
+    rate_limit_per_min := 0;
+    retry_after_seconds := 0;
+    return next;
+    return;
+  end if;
+
+  -- Update last_used_at in-band with the limiter (saves a separate
+  -- UPDATE round-trip from the Edge Function).
+  update public.api_keys set last_used_at = now() where id = v_key.id;
+
+  -- Atomic counter upsert. now() returns transaction start time and is
+  -- the same value throughout this statement, so the case branches see
+  -- a consistent timestamp for the window comparison.
   insert into public.api_key_rate_limits (api_key_id, window_start, request_count)
-  values (p_key_id, v_now, 1)
+  values (v_key.id, now(), 1)
   on conflict (api_key_id) do update
     set
       window_start = case
-        when public.api_key_rate_limits.window_start < v_now - interval '1 minute'
-          then v_now
+        when public.api_key_rate_limits.window_start < now() - interval '1 minute'
+          then now()
         else public.api_key_rate_limits.window_start
       end,
       request_count = case
-        when public.api_key_rate_limits.window_start < v_now - interval '1 minute'
+        when public.api_key_rate_limits.window_start < now() - interval '1 minute'
           then 1
         else public.api_key_rate_limits.request_count + 1
       end
-  returning request_count into v_count;
+  returning request_count, window_start into v_count, v_window;
 
-  return v_count <= p_limit_per_min;
+  allowed := v_count <= v_key.rate_limit_per_min;
+  rate_limit_per_min := v_key.rate_limit_per_min;
+  -- Approximate Retry-After: time remaining in the current 60s window.
+  -- 60s ceiling is a safe overestimate; clients can retry sooner if
+  -- they track the window themselves.
+  retry_after_seconds := greatest(0, 60 - extract(epoch from (now() - v_window))::int);
+  return next;
 end;
 $$;
 
 -- Lock down execution: only service_role may call this. Without this revoke,
 -- PostgREST exposes the RPC to authenticated users via the auto-generated
 -- REST surface, letting an attacker burn another customer's rate budget.
-revoke all on function public.consume_api_request(uuid, int) from public, anon, authenticated;
-grant execute on function public.consume_api_request(uuid, int) to service_role;
+revoke all on function public.consume_api_request(uuid) from public, anon, authenticated;
+grant execute on function public.consume_api_request(uuid) to service_role;
