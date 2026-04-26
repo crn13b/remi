@@ -10,11 +10,14 @@
 const WINDOW_SEC = 15 * 60; // 15-minute windows aligned to cache refresh cadence
 
 function uuidToBytes(uuid: string): Uint8Array {
-  // Strip dashes, parse as 32 hex chars → 16 bytes.
-  const hex = uuid.replace(/-/g, "");
-  if (hex.length !== 32 || !/^[0-9a-f]{32}$/i.test(hex)) {
+  // Require canonical 8-4-4-4-12 hex layout. After stripping dashes we have
+  // 32 hex chars; without the layout check, a caller could pass a 32-char
+  // hex string with no dashes (or arbitrary dash positions) and silently
+  // get accepted, breaking the documented contract.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
     throw new Error(`invalid UUID: ${uuid}`);
   }
+  const hex = uuid.replace(/-/g, "");
   const bytes = new Uint8Array(16);
   for (let i = 0; i < 16; i++) {
     bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);

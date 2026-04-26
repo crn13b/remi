@@ -83,3 +83,56 @@ Deno.test("applyScoreNoise: rotates across 15-min boundary at least sometimes", 
   }
   assert(disagreements >= 1, `expected some windows to differ across 10:14:59 → 10:15:00, got ${disagreements}`);
 });
+
+Deno.test("applyScoreNoise: produces all 5 offset values across many inputs", async () => {
+  // Catches a bug where the offset is always 0 (e.g. `% 1` typo) or stuck on
+  // a subset. Sweeps many (symbol, key) pairs and confirms every offset
+  // appears at least once.
+  const seenOffsets = new Set<number>();
+  const symbols = ["BTC", "ETH", "SOL", "AAPL", "MSFT", "DOGE", "AVAX", "LINK", "DOT", "ADA"];
+  const keys = [
+    "11111111-1111-1111-1111-111111111111",
+    "22222222-2222-2222-2222-222222222222",
+    "33333333-3333-3333-3333-333333333333",
+    "44444444-4444-4444-4444-444444444444",
+  ];
+  for (const k of keys) {
+    for (const s of symbols) {
+      const out = await applyScoreNoise(50, s, k, COMPUTED_AT); // raw=50 → no clamping
+      seenOffsets.add(out - 50);
+    }
+  }
+  for (const expected of [-2, -1, 0, 1, 2]) {
+    assert(seenOffsets.has(expected), `offset ${expected} never produced; saw ${[...seenOffsets].sort()}`);
+  }
+});
+
+Deno.test("applyScoreNoise: rejects malformed UUID layout", async () => {
+  const bad = [
+    "not-a-uuid",
+    "11111111111111111111111111111111",            // 32 hex chars, no dashes
+    "1111-1111-1111-1111-1111-11111111111111111",  // wrong dash positions
+    "11111111-1111-1111-1111-1111111111111",       // 11 chars in last group
+    "11111111-1111-1111-1111-1111111111111z",      // non-hex
+    "",
+  ];
+  for (const b of bad) {
+    let threw = false;
+    try {
+      await applyScoreNoise(50, "BTC", b, COMPUTED_AT);
+    } catch {
+      threw = true;
+    }
+    assert(threw, `expected throw for invalid UUID: ${JSON.stringify(b)}`);
+  }
+});
+
+Deno.test("applyScoreNoise: rejects invalid computedAt", async () => {
+  let threw = false;
+  try {
+    await applyScoreNoise(50, "BTC", KEY_A, "not-a-date");
+  } catch {
+    threw = true;
+  }
+  assert(threw, "expected throw for invalid computedAt");
+});
