@@ -84,3 +84,12 @@ Deno.test("hashToken: known answer test", async () => {
   // echo -n "remi_live_aaaaaaaa...64 a's" | shasum -a 256
   assertEquals(await hashToken(VALID_TOKEN), VALID_HASH);
 });
+
+Deno.test("hashToken: empty-string known answer test", async () => {
+  // Pins SHA-256 algorithm choice. Canonical empty-string SHA-256:
+  // https://en.wikipedia.org/wiki/SHA-2#Examples_of_SHA-2_variants
+  assertEquals(
+    await hashToken(""),
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  );
+});

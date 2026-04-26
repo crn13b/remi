@@ -12,8 +12,18 @@ const TOKEN_FULL_LEN = TOKEN_PREFIX.length + TOKEN_HEX_LEN;
 
 /**
  * Parse a Bearer token from an Authorization header value.
- * Returns the raw token string (without scheme), or null if the header is
- * missing or malformed.
+ * Returns the trimmed token string (without scheme), or null if the header
+ * is missing or malformed.
+ *
+ * Implementation notes:
+ * - Splits on the first run of any whitespace character (`\s`), which
+ *   includes SP, TAB, CR, LF, FF. HTTP/1.1 only uses SP/TAB inside header
+ *   values, so the broader match is harmless and the format gate downstream
+ *   (`isValidTokenFormat`) rejects anything that wouldn't be a valid token
+ *   anyway.
+ * - Trailing whitespace on the token is trimmed. A header like
+ *   `"Bearer abc   "` yields token `"abc"`, not `"abc   "`. This is lenient
+ *   by design.
  */
 export function parseBearerToken(header: string | null): string | null {
   if (!header) return null;
@@ -39,6 +49,11 @@ export function isValidTokenFormat(token: string): boolean {
 
 /**
  * SHA-256 hash a token, return lowercase hex (64 chars).
+ *
+ * Callers MUST run `isValidTokenFormat(token)` first. This function will
+ * happily hash anything (empty strings, megabytes of garbage, attacker-
+ * controlled bytes) — the format gate is what prevents waste and timing
+ * differences before the DB lookup.
  */
 export async function hashToken(token: string): Promise<string> {
   const bytes = new TextEncoder().encode(token);
