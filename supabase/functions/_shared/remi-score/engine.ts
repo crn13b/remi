@@ -153,7 +153,7 @@ function formatPrice(price: number): string {
 
 // ─── Score → Sentiment / Color Mapping ──────────────────────────
 
-function scoreToSentiment(score: number): RemiScoreResult["sentiment"] {
+export function scoreToSentiment(score: number): RemiScoreResult["sentiment"] {
   if (score >= 80) return "Strong Buy";
   if (score >= 70) return "Buy";
   if (score >= 56) return "Buy";

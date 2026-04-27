@@ -408,6 +408,9 @@ verify_jwt = false
 [functions.refresh-global-scores]
 verify_jwt = false
 
+[functions.public-api-score]
+verify_jwt = false
+
 [functions.create-watchlist]
 verify_jwt = false
 
